@@ -557,6 +557,23 @@ class LIET:
         summary statistics of each posterior to `self.results['opt_params']`. 
         '''
 
+        def kde_mode(samples, tol=1e-2):
+            '''
+            Computes the mode of the distribution after applying a guassian kde
+            '''
+            smin = min(samples)
+            smax = max(samples)
+            N = int((smax - smin)/tol)
+            
+            samp_kde = sp.stats.gaussian_kde(samples)
+            x = np.linspace(smin, smax, N)
+            y = samp_kde.pdf(x)
+
+            mode = max(zip(x,y), key = lambda x : x[1])[0]
+
+            return mode
+
+
         for p in self._pmap.keys():
 
             try:
@@ -565,12 +582,7 @@ class LIET:
                     samps = self.results['posteriors'][p][:]
                     zeros = np.zeros((len(samps), 1))
                     samps = np.concatenate((samps, zeros), axis=1)
-                                                                        ## THIS DOESN'T WORK BECAUSE OF self.results['posteriors'] TYPE (MultiTrace). Not sure this is necessary.
-                    # Reassign padded array to results
-#                    print(samps)                            
-#                    print(np.shape(samps))
-#                    self.results['posteriors'][p] = samps
-#                    print(self.results['posteriors'][p])
+
                 else:
                     samps = self.results['posteriors'][p][:]
 
@@ -578,7 +590,8 @@ class LIET:
                 mean = np.mean(samps, axis=0)
                 median = np.median(samps, axis=0)
                 std = sp.stats.tstd(samps, axis=0)
-                mode = sp.stats.mode(samps, axis=0)[0][0]
+#                mode = sp.stats.mode(samps, axis=0)[0][0]
+                mode = kde_mode(samps)
                 skew = sp.stats.skew(samps, axis=0)
                 skewtest = sp.stats.skewtest(samps, axis=0).pvalue
 
