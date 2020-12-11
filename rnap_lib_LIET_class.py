@@ -393,7 +393,7 @@ class LIET:
                 nu=self._pmap['tI']
             )
 
-            # Custom Elongation distribution ##################################
+            # Custom Elongation distribution ==================================
             def _emg_cdf(x, mu, sigma, tau):
                 # z = (x - mu) / sigma
                 def _norm_cdf(z):
@@ -463,7 +463,7 @@ class LIET:
                 # Compute log-likelihood
                 log_pdf = np.log(elong_pdf)
                 return log_pdf
-                ###############################################################
+                #==============================================================
     
             # Convert Theano log-prob func into pymc3 distribution variable
             E_pdf = pm.DensityDist.dist(elong_logp)

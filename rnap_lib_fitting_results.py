@@ -30,6 +30,39 @@ def vi_fit(
     '''
     Function that performs fitting using the VI framework. Returns inference 
     object and approximation, as well as tracker object, if specified.
+
+    Parameters
+    ----------
+    model : pymc3 model object
+        ...
+
+    method : string
+        ...
+
+    optimizer : string
+        ...
+
+    learning_rate : float
+        ...
+    
+    start : dictionary
+        ...
+
+    iterations : integer
+        ...
+
+    tolerance : float
+        ...
+
+    param_tracker : boolian
+        ...
+
+
+    Returns
+    -------
+    fit : dictionary
+        ...
+        
     '''
     fit = {
         'vi': None,

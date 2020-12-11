@@ -96,6 +96,51 @@ def gene_model(
     rvs=False,
     pdf=True,
 ):
+    '''
+    Parameters
+    ----------
+    xvals : numpy array
+        Genomic coordinates on which to evaluate the model. Array of integers.
+
+    mu0, sig0, tau0 : float kwargs
+        Model parameters specifying the sense-strand Loading/Initiation EMG
+    
+    mu1, sig1 : float kwargs
+        Model parameters specifying the sense-strand Termination guassian
+    
+    mu_a, sig_a, tau_a : float kwargs
+        Model parameters specifying the antisense-strand Loading/Initiation EMG
+        NOTE: if <bias = None>, anti-sense pdf and rvs wont be generated.
+
+    weights : list (length == 4)
+        Weights specifying Loading/Initiation, Elongation, Termination and 
+        Background, in that order: [LI, E, T, B]. Must sum to 1. Background 
+        weight is used for anti-sense strand as well.
+
+    bias : float
+        The "strand bias," e.g. the fraction of reads that come from the sense 
+        strand. Must be between 0.0 and 1.0, or if None, anti-sense components 
+        are not computed (Default: None).
+    
+    N : integer
+        Total number of reads to generate, distributed across all components, 
+        according to <weights> and <bias> parameters.
+
+    seed : number
+        Random seed for reproducibility of rvs samples.
+
+    rvs : bool
+        Indicates whether or not to return rvs
+
+    pdf : bool
+        Indicates whether or not to return pdf
+
+
+    Returns
+    -------
+    pdf, pdf_a, rvs, rvs_a : numpy arrays
+        ...
+    '''
     # Unpack weights
     w5, we, w3, wb = weights
 
