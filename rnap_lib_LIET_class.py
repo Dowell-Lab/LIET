@@ -480,7 +480,6 @@ class LIET:
         antisense_reads = strand_ref[-1*self.data['annot']['strand']]
 
         # Define sense-strand full model (with or without background)
-#        if self.priors['w'][1][3] != 0:
         if background == True and self.priors['w']['alpha_B'] != 0:
             with self.model:
                 back_pdf = pm.Uniform.dist(
@@ -491,7 +490,7 @@ class LIET:
         else:
             components = [LI_pdf, E_pdf, T_pdf]
 
-        with self.model:                                            ## I NEED TO FIX THE WAY THE DIRICHLET PRIOR IS DEFINED (PROBABLY ON LINES 331--336)
+        with self.model:
             LIET_pdf = pm.Mixture(
                     'LIET_pdf',
                     w=self._pmap['w'],
@@ -502,7 +501,7 @@ class LIET:
         # Define antisense-strand model (w/ or w/o bckgrnd or sep sL/tI priors)
         if antisense == True:
             if self.priors['sL_a'] != None:
-                s_a = self._pmap['sL_a']                            ## THESE MIGHT HAVE TO GO IN PYMC ENVIRONMENT, SINCE ._pmap CONTAINS PYMC OBJECTS
+                s_a = self._pmap['sL_a']
             else:
                 s_a = self._pmap['sL']
 
@@ -511,7 +510,6 @@ class LIET:
             else:
                 t_a = self._pmap['tI']
             
-#            if self.priors['w'][1][3] != 0:                       ## THIS IS ALL A BIG MESS.....
             if background == True and self.priors['w']['alpha_B'] != 0:
                 with self.model:
                     LI_a_pdf = pm.ExGaussian.dist(
@@ -519,9 +517,8 @@ class LIET:
                         sigma=s_a, 
                         nu=t_a
                     )
-                    components = [LI_a_pdf, back_pdf]               ## NOT SURE IF components NEEDS TO BE IN PYMC ENV
+                    components = [LI_a_pdf, back_pdf]
 
-#                w_a = [self.priors['w'][1][0], self.priors['w'][1][3]]
                 w_a = [self.priors['w']['alpha_LI'], 
                     self.priors['w']['alpha_B']]
 

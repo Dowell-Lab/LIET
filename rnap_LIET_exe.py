@@ -3,6 +3,7 @@ import numpy as np
 from rnap_lib_LIET_class import LIET
 import rnap_lib_data_proc as dp
 import rnap_lib_data_sim as ds
+import rnap_lib_fitting_results as fr
 
 ## PARSE INPUT FILES ##########################################################
 

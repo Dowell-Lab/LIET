@@ -1,7 +1,19 @@
 import numpy as np
 import scipy.stats as stats
 
-### Model PDF components ##############################
+## Coordinate shift function ==================================================
+
+def inverter(x, mu):
+    '''
+    Inverts the xvals prior to input into the above functions to be used for 
+    antisense strand. Inversion point <mu> is mL.
+    '''
+    x_invert = np.array([2*mu - e for e in x])
+    return x_invert
+
+
+
+## Model PDF components =======================================================
 
 def load_initiation_pdf(x, m, s, t):
     pdf = stats.exponnorm.pdf(x, t/s, m, s)
@@ -33,7 +45,8 @@ def background_pdf(x):
     return pdf
 
 
-### Model RVS components ##############################
+
+## Model RVS components =======================================================
 
 def load_initiation_rvs(x, m, s, t, size=1000, seed=42):
     samples = stats.exponnorm.rvs(t/s, m, s, size=size, random_state=seed)
@@ -63,7 +76,8 @@ def background_rvs(x, size=10, seed=42):
     return samples
 
 
-### Full model PDF and RVS ####################################################
+
+## Full model PDF and RVS =====================================================
 
 def gene_model(
     xvals, 
@@ -80,7 +94,7 @@ def gene_model(
     N=5000, 
     seed=42, 
     rvs=False,
-    pdf=True
+    pdf=True,
 ):
     # Unpack weights
     w5, we, w3, wb = weights
@@ -101,22 +115,21 @@ def gene_model(
             m1=mu1, 
             s1=sig1
         )
-        t_pdf = termination_pdf(xvals, m=mu1, s=sig1)
-
-        
+        t_pdf = termination_pdf(xvals, m=mu1, s=sig1)        
         back_pdf = background_pdf(xvals)
 
-        pdf_return = w5*li_pdf + we*e_pdf + w3*t_pdf + wb*back_pdf
+        pdf_return = bias*(w5*li_pdf + we*e_pdf + w3*t_pdf + wb*back_pdf)
 
-# NOTE: I DON'T HAVE THE ANTI-SENSE STRAND INCORPORATED INTO THE PDF. IT IS NOT
-# CLEAR HOW I WOULD FLIP THE GENOMIC COORDINATES YET.
-#        if bias:
-#            li_a_pdf = load_initiation_pdf(
-#                xvals, 
-#                m=mu_a, 
-#                s=sig_a, 
-#                t=tau_a
-#            )
+        if bias:
+            li_a_pdf = load_initiation_pdf(
+                inverter(xvals, mu_a), 
+                m=mu_a, 
+                s=sig_a, 
+                t=tau_a
+            )
+            back_a = background_pdf(inverter(xvals, mu_a))
+
+            pdf_a_return = (1-bias)*((1-wb)*li_a_pdf + wb*back_a)
 
     # Generate RV samples
     if rvs:
@@ -190,8 +203,8 @@ def gene_model(
             return rvs_return
     else:
         if pdf and rvs:
-            return pdf_return, rvs_return, rvs_a_return
+            return pdf_return, pdf_a_return, rvs_return, rvs_a_return
         elif pdf and not rvs:
-            return pdf_return
+            return pdf_return, pdf_a_return
         else:
             return rvs_return, rvs_a_return
