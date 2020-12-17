@@ -74,7 +74,7 @@ def elongation_rvs(x, m0, s0, t0, m1, s1, size=1000, seed=42):
     xfull = np.array(range(xmin, xmax))
 
     pdf = elongation_pdf(xfull, m0=m0, s0=s0, t0=t0, m1=m1, s1=s1)
-    
+
     # Adjust pdf to sum to 1.0 (residue from finite normalization integration)
     residue = 1.0 - sum(pdf)
     pdf[-1] = pdf[-1] + abs(residue)
@@ -130,11 +130,11 @@ def gene_model(
     mu1_p, sig1_p : float kwargs
         Model parameters specifying the positive-strand Termination gaussian
     
-    mu0_p, sig0_p, tau0_p : float kwargs
-        Model parameters specifying the positive-strand Loading/Initiation EMG
+    mu0_n, sig0_n, tau0_n : float kwargs
+        Model parameters specifying the negative-strand Loading/Initiation EMG
     
-    mu1_p, sig1_p : float kwargs
-        Model parameters specifying the positive-strand Termination gaussian
+    mu1_n, sig1_n : float kwargs
+        Model parameters specifying the negative-strand Termination gaussian
 
     w_p : list (length == 4)
         Weights specifying Loading/Initiation, Elongation, Termination and 
@@ -276,7 +276,7 @@ def gene_model(
 
             rvs_p = np.array([])
 
-            if Nli_p != 0:
+            if Nli_p != 0.0:
                 li_rvs_p = load_initiation_rvs(
                     xvals, 
                     mu0_p, 
@@ -287,7 +287,7 @@ def gene_model(
                 )
                 rvs_p = np.concatenate([rvs_p, li_rvs_p])
             
-            if Ne_p != 0:
+            if Ne_p != 0.0:
                 # Elongation rvs invert internally
                 e_rvs_p = elongation_rvs(
                     xvals, 
@@ -301,7 +301,7 @@ def gene_model(
                 )
                 rvs_p = np.concatenate([rvs_p, e_rvs_p])
             
-            if Nt_p != 0:
+            if Nt_p != 0.0:
                 t_rvs_p = termination_rvs(
                     xvals, 
                     mu1_p, 
@@ -329,7 +329,7 @@ def gene_model(
 
             rvs_n = np.array([])
 
-            if Nli_n != 0:
+            if Nli_n != 0.0:
                 li_rvs_n = load_initiation_rvs(
                     xvals, 
                     mu0_n, 
@@ -340,7 +340,7 @@ def gene_model(
                 )
                 rvs_n = np.concatenate([rvs_n, invert(li_rvs_n, mu0_n)])
 
-            if Ne_n != 0:
+            if Ne_n != 0.0:
                 # Elongation rvs invert internally
                 e_rvs_n = elongation_rvs(
                     xvals, 
@@ -354,7 +354,7 @@ def gene_model(
                 )
                 rvs_n = np.concatenate([rvs_n, e_rvs_n])
 
-            if Nt_n != 0:
+            if Nt_n != 0.0:
                 t_rvs_n = termination_rvs(
                     xvals, 
                     mu1_n, 
@@ -364,7 +364,7 @@ def gene_model(
                 )
                 rvs_n = np.concatenate([rvs_n, invert(t_rvs_n, mu1_n)])
 
-            if Nb_n != 0:
+            if Nb_n != 0.0:
                 back_rvs_n = background_rvs(xvals, size=Nb_n, seed=seed)
                 rvs_n = np.concatenate([rvs_n, back_rvs_n])
 
