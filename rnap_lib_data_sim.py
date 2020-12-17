@@ -169,9 +169,15 @@ def gene_model(
         boolian parameters.
     '''
 
-    if mu1_p < mu0_p or mu0_n < mu1_n:
-        raise ValueError('Loading position parameters (<mu0_p> and <mu0_n>) '
-            'must be upstream of termination positions (<mu1_p> and <mu1_n>).')
+    # Check for correct orientation of loading and termination positions
+    if mu1_p != None and mu0_p != None:
+        if mu1_p < mu0_p:
+            raise ValueError('Loading position parameter <mu0_p> must be '
+                'upstream of termination position <mu1_p>.')
+    if mu1_n != None and mu0_n != None:
+        if mu0_n < mu1_n:
+            raise ValueError('Loading position parameter <mu0_n> must be '
+                'upstream of termination position <mu1_n>.')
 
     # Check and unpack weights
     if w_p != None:
