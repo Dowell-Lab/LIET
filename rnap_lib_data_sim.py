@@ -3,13 +3,15 @@ import scipy.stats as stats
 
 ## Coordinate shift function ==================================================
 
-def inverter(x, mu):
+def invert(x, mu):
     '''
-    Inverts the xvals prior to input into the above functions to be used for 
-    antisense strand. Inversion point <mu> is mL.
+    Inverts the <x> (int, float, or iterable) prior to input into the above 
+    functions to be used for antisense strand. Inversion point <mu>.
     '''
-    x_invert = np.array([2*mu - e for e in x])
-    return x_invert
+    if isinstance(x, (float, int)):
+        return 2*mu - x
+    else:
+        return np.array([2*mu - e for e in x])
 
 
 
@@ -19,17 +21,28 @@ def load_initiation_pdf(x, m, s, t):
     pdf = stats.exponnorm.pdf(x, t/s, m, s)
     return pdf
 
-
+# Note elongation_pdf must be inverted internally due to having 2 inversion 
+# points, m0 and m1.
 def elongation_pdf(x, m0, s0, t0, m1, s1):
-    unscaled = (stats.exponnorm.cdf(x, t0/s0, m0, s0) 
-        * stats.norm.sf(x, m1, s1))
+
+    if m0 <= m1:
+        unscaled = (stats.exponnorm.cdf(x, t0/s0, m0, s0) 
+            * stats.norm.sf(x, m1, s1))
+    else:
+        unscaled = (stats.exponnorm.cdf(invert(x, m0), t0/s0, m0, s0) 
+            * stats.norm.sf(invert(x, m1), m1, s1))
     
     xmin = int(min(m0 - 10*s0, m1 - 10*s1))
     xmax = int(max(m0 + 10*np.sqrt(s0**2 + t0**2), m1 + 10*s1))
     xfull = np.array(range(xmin, xmax))
     
-    norm_factor = sum(stats.exponnorm.cdf(xfull, t0/s0, m0, s0) 
-        * stats.norm.sf(xfull, m1, s1))
+    if m0 <= m1:
+        norm_factor = sum(stats.exponnorm.cdf(xfull, t0/s0, m0, s0) 
+            * stats.norm.sf(xfull, m1, s1))
+    else:
+        norm_factor = sum(stats.exponnorm.cdf(invert(xfull, m0), t0/s0, m0, s0) 
+            * stats.norm.sf(invert(xfull, m1), m1, s1))
+
     pdf = unscaled/norm_factor
     return pdf
 
@@ -55,13 +68,19 @@ def load_initiation_rvs(x, m, s, t, size=1000, seed=42):
 
 def elongation_rvs(x, m0, s0, t0, m1, s1, size=1000, seed=42):
     
-    pdf = elongation_pdf(x, m0=m0, s0=s0, t0=t0, m1=m1, s1=s1)
-    # Adjust pdf to sum to 1.0
+    # Adjust <x> so that it encompasses full normalization range (xfull)
+    xmin = int(min(m0 - 10*s0, m1 - 10*s1))
+    xmax = int(max(m0 + 10*np.sqrt(s0**2 + t0**2), m1 + 10*s1))
+    xfull = np.array(range(xmin, xmax))
+
+    pdf = elongation_pdf(xfull, m0=m0, s0=s0, t0=t0, m1=m1, s1=s1)
+    
+    # Adjust pdf to sum to 1.0 (residue from finite normalization integration)
     residue = 1.0 - sum(pdf)
     pdf[-1] = pdf[-1] + abs(residue)
         
     np.random.seed(seed=seed)
-    samples = np.random.choice(x, size=size, replace=True, p=pdf)
+    samples = np.random.choice(xfull, size=size, replace=True, p=pdf)
     return samples
 
 
@@ -81,17 +100,20 @@ def background_rvs(x, size=10, seed=42):
 
 def gene_model(
     xvals, 
-    mu0=None, 
-    sig0=None, 
-    tau0=None, 
-    mu1=None, 
-    sig1=None, 
-    mu_a=None,
-    sig_a=None,
-    tau_a=None,
-    weights=[0.7, 0.2, 0.09, 0.01], 
-    bias = None,
-    N=5000, 
+    mu0_p=None, 
+    sig0_p=None, 
+    tau0_p=None, 
+    mu1_p=None, 
+    sig1_p=None, 
+    mu0_n=None, 
+    sig0_n=None, 
+    tau0_n=None, 
+    mu1_n=None, 
+    sig1_n=None, 
+    w_p=[0.7, 0.2, 0.09, 0.01],
+    w_n=[0.99, 0, 0, 0.01],
+    N_p=1000,
+    N_n=1000,
     seed=42, 
     rvs=False,
     pdf=True,
@@ -102,29 +124,32 @@ def gene_model(
     xvals : numpy array
         Genomic coordinates on which to evaluate the model. Array of integers.
 
-    mu0, sig0, tau0 : float kwargs
-        Model parameters specifying the sense-strand Loading/Initiation EMG
+    mu0_p, sig0_p, tau0_p : float kwargs
+        Model parameters specifying the positive-strand Loading/Initiation EMG
     
-    mu1, sig1 : float kwargs
-        Model parameters specifying the sense-strand Termination guassian
+    mu1_p, sig1_p : float kwargs
+        Model parameters specifying the positive-strand Termination gaussian
     
-    mu_a, sig_a, tau_a : float kwargs
-        Model parameters specifying the antisense-strand Loading/Initiation EMG
-        NOTE: if <bias = None>, anti-sense pdf and rvs wont be generated.
+    mu0_p, sig0_p, tau0_p : float kwargs
+        Model parameters specifying the positive-strand Loading/Initiation EMG
+    
+    mu1_p, sig1_p : float kwargs
+        Model parameters specifying the positive-strand Termination gaussian
 
-    weights : list (length == 4)
+    w_p : list (length == 4)
         Weights specifying Loading/Initiation, Elongation, Termination and 
-        Background, in that order: [LI, E, T, B]. Must sum to 1. Background 
-        weight is used for anti-sense strand as well.
-
-    bias : float
-        The "strand bias," e.g. the fraction of reads that come from the sense 
-        strand. Must be between 0.0 and 1.0, or if None, anti-sense components 
-        are not computed (Default: None).
+        Background on the positive strand. In order: [LI, E, T, B]. Weights 
+        must sum to 1.
     
-    N : integer
-        Total number of reads to generate, distributed across all components, 
-        according to <weights> and <bias> parameters.
+    w_n : list (length == 4)
+        Weights specifying Loading/Initiation, Elongation, Termination and 
+        Background on the negative strand. In order: [LI, E, T, B]. Weights 
+        must sum to 1. NOTE: if `w_n = None`, no pdf or rvs will be generated
+        for the negative strand.
+    
+    N_p : integer
+        Total number of reads to generate from the positive strand pdf, 
+        distributed according to <w_p>.
 
     seed : number
         Random seed for reproducibility of rvs samples.
@@ -138,118 +163,220 @@ def gene_model(
 
     Returns
     -------
-    pdf, pdf_a, rvs, rvs_a : numpy arrays
-        ...
+    pdf_p, pdf_n, rvs_p, rvs_n : numpy arrays
+        Returned probability density functions and random variable samples for 
+        the two strands. Number of arrays returned depends on <rvs> and <pdf> 
+        boolian parameters.
     '''
-    # Unpack weights
-    w5, we, w3, wb = weights
 
-    # Generate PDF
+    if mu1_p < mu0_p or mu0_n < mu1_n:
+        raise ValueError('Loading position parameters (<mu0_p> and <mu0_n>) '
+            'must be upstream of termination positions (<mu1_p> and <mu1_n>).')
+
+    # Check and unpack weights
+    if w_p != None:
+        if round(sum(w_p), 5) == 1.0:
+            wLI_p, wE_p, wT_p, wB_p = w_p
+        else:
+            raise ValueError('Weights parameter <w_p> must sum to 1.0')
+    if w_n != None:
+        if round(sum(w_n), 5) == 1.0:
+            wLI_n, wE_n, wT_n, wB_n = w_n
+        else:
+            raise ValueError('Weights parameter <w_n> must sum to 1.0')
+
+    # Generate PDF(s)
     if pdf:
-        li_pdf = load_initiation_pdf(
-            xvals, 
-            m=mu0, 
-            s=sig0, 
-            t=tau0
-        )
-        e_pdf = elongation_pdf(
-            xvals, 
-            m0=mu0, 
-            s0=sig0, 
-            t0=tau0, 
-            m1=mu1, 
-            s1=sig1
-        )
-        t_pdf = termination_pdf(xvals, m=mu1, s=sig1)        
-        back_pdf = background_pdf(xvals)
+        # Positive strand pdf
+        if w_p != None:
 
-        pdf_return = bias*(w5*li_pdf + we*e_pdf + w3*t_pdf + wb*back_pdf)
+            pdf_p = np.zeros(len(xvals))
 
-        if bias:
-            li_a_pdf = load_initiation_pdf(
-                inverter(xvals, mu_a), 
-                m=mu_a, 
-                s=sig_a, 
-                t=tau_a
-            )
-            back_a = background_pdf(inverter(xvals, mu_a))
+            if wLI_p != 0.0:
+                li_pdf_p = load_initiation_pdf(
+                    xvals, 
+                    m=mu0_p, 
+                    s=sig0_p, 
+                    t=tau0_p
+                )
+                pdf_p += wLI_p * li_pdf_p 
 
-            pdf_a_return = (1-bias)*((1-wb)*li_a_pdf + wb*back_a)
+            if wE_p != 0.0:
+                e_pdf_p = elongation_pdf(
+                    xvals, 
+                    m0=mu0_p, 
+                    s0=sig0_p, 
+                    t0=tau0_p, 
+                    m1=mu1_p, 
+                    s1=sig1_p
+                )
+                pdf_p += wE_p * e_pdf_p
+
+            if wT_p != 0.0:
+                t_pdf_p = termination_pdf(xvals, m=mu1_p, s=sig1_p)
+                pdf_p += wT_p * t_pdf_p
+
+            if wB_p != 0.0:
+                back_pdf_p = background_pdf(xvals)
+                pdf_p += wB_p * back_pdf_p
+        
+        else:
+            pdf_p = np.array([])
+
+        # Negative strand pdf
+        if w_n != None:
+
+            pdf_n = np.zeros(len(xvals))
+
+            if wLI_n != 0.0:
+                li_pdf_n = load_initiation_pdf(
+                    invert(xvals, mu0_n),
+                    m=mu0_n, 
+                    s=sig0_n, 
+                    t=tau0_n
+                )
+                pdf_n += wLI_n * li_pdf_n
+
+            if wE_n != 0.0:
+            # Elongation pdf inverts internally
+                e_pdf_n = elongation_pdf(
+                    xvals, 
+                    m0=mu0_n, 
+                    s0=sig0_n, 
+                    t0=tau0_n, 
+                    m1=mu1_n, 
+                    s1=sig1_n
+                )
+                pdf_n += wE_n * e_pdf_n
+
+            if wT_n != 0.0:
+                t_pdf_n = termination_pdf(
+                    invert(xvals, mu1_n), 
+                    m=mu1_n, 
+                    s=sig1_n
+                )  
+                pdf_n += wT_n * t_pdf_n
+
+            if wB_n != 0.0:
+                back_pdf_n = background_pdf(invert(xvals, mu0_n))
+                pdf_n += wB_n * back_pdf_n
+        
+        else:
+            pdf_n = np.array([])
+
 
     # Generate RV samples
     if rvs:
+        # Positive strand rvs
+        if isinstance(N_p, int):
+            Nli_p = int(wLI_p * N_p)
+            Ne_p = int(wE_p * N_p)
+            Nt_p = int(wT_p * N_p)
+            Nb_p = int(wB_p * N_p)
 
-        # 'bias' is the fraction of reads from the sense strand
-        if bias == None:
-            N5 = int(w5 * N)
-            NE = int(we * N)
-            N3 = int(w3 * N)
-            Nb = int(wb * N)
+            rvs_p = np.array([])
+
+            if Nli_p != 0:
+                li_rvs_p = load_initiation_rvs(
+                    xvals, 
+                    mu0_p, 
+                    sig0_p, 
+                    tau0_p, 
+                    size=Nli_p, 
+                    seed=seed
+                )
+                rvs_p = np.concatenate([rvs_p, li_rvs_p])
+            
+            if Ne_p != 0:
+                # Elongation rvs invert internally
+                e_rvs_p = elongation_rvs(
+                    xvals, 
+                    mu0_p, 
+                    sig0_p, 
+                    tau0_p, 
+                    mu1_p, 
+                    sig1_p, 
+                    size=Ne_p, 
+                    seed=seed
+                )
+                rvs_p = np.concatenate([rvs_p, e_rvs_p])
+            
+            if Nt_p != 0:
+                t_rvs_p = termination_rvs(
+                    xvals, 
+                    mu1_p, 
+                    sig1_p, 
+                    size=Nt_p, 
+                    seed=seed
+                )
+                rvs_p = np.concatenate([rvs_p, t_rvs_p])
+
+            if Nb_p != 0:
+                back_rvs_p = background_rvs(xvals, size=Nb_p, seed=seed)
+                rvs_p = np.concatenate([rvs_p, back_rvs_p])
+            
+            rvs_p = np.array(np.sort(rvs_p), dtype='int32')
+        
         else:
-            N5 = int(w5 * N * bias)
-            NE = int(we * N * bias)
-            N3 = int(w3 * N * bias)
-            Nb = int(wb * N * bias)
-            # Number of reads on the antisense strand
-            Nb_a = int(wb * N * (1-bias))
-            N5_a = int(N - N5 - NE - N3 - Nb - Nb_a)
+            rvs_p = np.array([])
 
-            li_rvs_a = load_initiation_rvs(
-                xvals,
-                mu_a,
-                sig_a,
-                tau_a,
-                size=N5_a,
-                seed=seed
-            )
-            li_rvs_a = [-e + 2*mu_a for e in li_rvs_a]  # flip about mu_a
-            background_a = background_rvs(xvals, size=Nb_a, seed=seed)
+        # Negative strand rvs
+        if isinstance(N_n, int):
+            Nli_n = int(wLI_n * N_n)
+            Ne_n = int(wE_n * N_n)
+            Nt_n = int(wT_n * N_n)
+            Nb_n = int(wB_n * N_n)
 
-            # Concatenate all antisense-strand model components
-            rvs_a_return = np.concatenate([li_rvs_a, background_a])
-            rvs_a_return = np.array(np.around(rvs_a_return, decimals=0), 
-                dtype='int32')
-            rvs_a_return = np.sort(rvs_a_return)
+            rvs_n = np.array([])
 
-        li_rvs = load_initiation_rvs(
-            xvals, 
-            mu0, 
-            sig0, 
-            tau0, 
-            size=N5, 
-            seed=seed
-        )
-        e_rvs = elongation_rvs(
-            xvals, 
-            mu0, 
-            sig0, 
-            tau0, 
-            mu1, 
-            sig1, 
-            size=NE, 
-            seed=seed
-        )
-        t_rvs = termination_rvs(xvals, mu1, sig1, size=N3, seed=seed)
+            if Nli_n != 0:
+                li_rvs_n = load_initiation_rvs(
+                    xvals, 
+                    mu0_n, 
+                    sig0_n, 
+                    tau0_n, 
+                    size=Nli_n, 
+                    seed=seed
+                )
+                rvs_n = np.concatenate([rvs_n, invert(li_rvs_n, mu0_n)])
+
+            if Ne_n != 0:
+                # Elongation rvs invert internally
+                e_rvs_n = elongation_rvs(
+                    xvals, 
+                    mu0_n, 
+                    sig0_n, 
+                    tau0_n, 
+                    mu1_n, 
+                    sig1_n, 
+                    size=Ne_n, 
+                    seed=seed
+                )
+                rvs_n = np.concatenate([rvs_n, e_rvs_n])
+
+            if Nt_n != 0:
+                t_rvs_n = termination_rvs(
+                    xvals, 
+                    mu1_n, 
+                    sig1_n, 
+                    size=Nt_n, 
+                    seed=seed
+                )
+                rvs_n = np.concatenate([rvs_n, invert(t_rvs_n, mu1_n)])
+
+            if Nb_n != 0:
+                back_rvs_n = background_rvs(xvals, size=Nb_n, seed=seed)
+                rvs_n = np.concatenate([rvs_n, back_rvs_n])
+
+            rvs_n = np.array(np.sort(rvs_n), dtype='int32')
         
-        background = background_rvs(xvals, size=Nb, seed=seed)
-        
-        # Concatenate together all sense-strand model components
-        rvs_return = np.concatenate([li_rvs, e_rvs, t_rvs, background])
-        rvs_return = np.array(np.around(rvs_return, decimals=0), dtype='int32')
-        rvs_return = np.sort(rvs_return)
+        else:
+            rvs_n = np.array([])
 
     # Returns
-    if bias == None:
-        if pdf and rvs:
-            return pdf_return, rvs_return
-        elif pdf and not rvs:
-            return pdf_return
-        else:
-            return rvs_return
+    if pdf and rvs:
+        return pdf_p, pdf_n, rvs_p, rvs_n
+    elif pdf and not rvs:
+        return pdf_p, pdf_n
     else:
-        if pdf and rvs:
-            return pdf_return, pdf_a_return, rvs_return, rvs_a_return
-        elif pdf and not rvs:
-            return pdf_return, pdf_a_return
-        else:
-            return rvs_return, rvs_a_return
+        return rvs_p, rvs_n
