@@ -300,8 +300,10 @@ def LIET_plot(
         )
         annot = liet_class.data['annot']
         txt = f"{annot['chrom']}:{annot['start']}"
+        xlim = ax.get_xlim()
+        txt_pos = -1*xlim[0] / (xlim[1] - xlim[0]) + 0.003
         ax.text(
-            0.505, 0.02, txt, 
+            txt_pos, 0.02, txt,
             horizontalalignment='left', 
             verticalalignment='bottom', 
             transform=ax.transAxes
