@@ -2,7 +2,7 @@ import numpy as np
 import copy
 from collections import defaultdict
 
-## GENE ANNOTATION HANDLING ###################################################
+# GENE ANNOTATION HANDLING ====================================================
 
 def annotation(chrom=None, start=None, stop=None, strand=None):
     
@@ -67,7 +67,7 @@ def annot_loader(annot_file):
 
 
 
-## CONFIG FILE HANDLING #######################################################
+# CONFIG FILE HANDLING ========================================================
 
 def config_loader(config_file):
     '''
@@ -174,7 +174,7 @@ def config_loader(config_file):
     return config
 
 
-## PRIORS HANDLING ############################################################
+# PRIORS HANDLING =============================================================
 
 def prior_config(priors, tss, tts):
     '''
@@ -269,7 +269,7 @@ def prior_config_old(priors, tss, tts):
     return shifted_priors
 
 
-## BEDGRAPH HANDLING ##########################################################
+# BEDGRAPH HANDLING ===========================================================
 
 def gene_data(bedgraph, gene, pad_frac):
     '''
@@ -338,7 +338,7 @@ def rng_shift(gene, xvals, data):
 
 
 
-## NEW STUFF ##################################################################
+# NEW STUFF ===================================================================
 
 def overlap_check(annotations, pad=0):
     '''
@@ -400,7 +400,7 @@ def bgreads(bgfile, begin, end):
     ----------
     bgfile : generator
         File object for bedgraph formated file (generator). This file must be
-        sorted.
+        sorted. The bedgraph file should contain 5'-end data.
     
     begin : int
         First coordinate (inclusive) to count reads
@@ -411,9 +411,18 @@ def bgreads(bgfile, begin, end):
 
     Returns
     -------
+    current_line : list
+        List of length 4 --- [chrom, start, stop, count]. Contains the column 
+        values for the most recent bedgraph line from <bgfile>, once the <end> 
+        coordinate has been reached.
 
+    preads : list
+        List of integers which correspond to the 5'-end coordiantes of all 
+        positive strand reads, between coordinates <begin> and <end>.
 
-    Returns: list of final bgfile line, pos-strand dict, neg-strand dict
+    nreads : list
+        List of integers which correspond to the 5'-end coordiantes of all 
+        negative strand reads, between coordinates <begin> and <end>.
     '''
     # Iterate through bgfile generator until it reaches 'begin' position
     for line in bgfile:
