@@ -396,9 +396,22 @@ def bg_iterator(bgfile, begin, end):
 
 def bgreads(bgfile, begin, end):
     '''
-    bgfile      file object for bedgraph formated file (generator)
-    begin       first coordinate (inclusive) to count reads (int)
-    end         final coordinate (non-inclusive) to count reads (int)
+    Parameters
+    ----------
+    bgfile : generator
+        File object for bedgraph formated file (generator). This file must be
+        sorted.
+    
+    begin : int
+        First coordinate (inclusive) to count reads
+    
+    end : int
+        Final coordinate (non-inclusive) to count reads
+
+
+    Returns
+    -------
+
 
     Returns: list of final bgfile line, pos-strand dict, neg-strand dict
     '''
@@ -443,4 +456,5 @@ def bgreads(bgfile, begin, end):
                 for i in range(max([begin, st]), min([end, sp])):
                     nreads[i] = abs(ct)
         else:
-            return [ch, st, sp, ct], preads, nreads
+            current_line = [ch, st, sp, ct]
+            return current_line, preads, nreads

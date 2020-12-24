@@ -174,11 +174,10 @@ def gene_model(
         if mu1_p < mu0_p:
             raise ValueError('Loading position parameter <mu0_p> must be '
                 'upstream of termination position <mu1_p>.')
-#    if mu1_n != None and mu0_n != None:
-#        print(mu0_n, mu1_n)
-#        if mu0_n < mu1_n:
-#            raise ValueError('Loading position parameter <mu0_n> must be '
-#                'upstream of termination position <mu1_n>.')
+    if mu1_n != None and mu0_n != None:
+        if mu0_n < mu1_n:
+            raise ValueError('Loading position parameter <mu0_n> must be '
+                'upstream of termination position <mu1_n>.')
 
     # Check and unpack weights
     if w_p != None:
