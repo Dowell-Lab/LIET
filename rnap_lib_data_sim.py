@@ -21,8 +21,8 @@ def load_initiation_pdf(x, m, s, t):
     pdf = stats.exponnorm.pdf(x, t/s, m, s)
     return pdf
 
-# Note elongation_pdf must be inverted internally due to having 2 inversion 
-# points, m0 and m1.
+# Note elongation_pdf must be inverted internally because it has 2 inversion 
+# points --- <m0> and <m1>.
 def elongation_pdf(x, m0, s0, t0, m1, s1):
 
     if m0 <= m1:
