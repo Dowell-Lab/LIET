@@ -59,6 +59,17 @@ def convergence_plot(
         hist_ax.set_title('Negative ELBO tracker')
         hist_ax.set_xlabel('Iterations')
 
+        rmap = inference.approx.groups[0].bij.rmap
+        labels = rmap(np.array(range(len(tracker['mean'][0]))))
+        labels = [k for k, v in sorted(labels.items(), key=lambda x : x[1])]
+        labels = [e.split('_')[0] for e in labels]                          ## This doesn't quite work because of parameters with underscores, like 'w_a'
+
+        std_ax.legend(
+            labels, 
+            loc='center left', 
+            bbox_to_anchor=(1.02, 0.5)
+        )
+
     elif inference and not tracker:
         
         hist_ax = fig.add_subplot(111)
@@ -76,6 +87,7 @@ def convergence_plot(
         std_ax.plot(tracker['std'])
         std_ax.set_title('Std tracker')
         std_ax.set_xlabel('Iterations')
+        
     else:
         return 0
 
