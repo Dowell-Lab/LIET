@@ -5,7 +5,7 @@ import rnap_lib_data_proc as dp
 import rnap_lib_data_sim as ds
 import rnap_lib_fitting_results as fr
 
-## PARSE INPUT FILES ##########################################################
+## PARSE INPUT FILES ==========================================================
 
 # Load config (contents: FILES, MODEL, PRIORS, DATA_PROC, FITTING, RESULTS)
 config_file = "C:\\Users\\Jacob\\Dropbox\\0DOWELL\\rnap_model\\LIET_test\\LIET_test_config.txt"
@@ -21,7 +21,7 @@ annot_dict = dp.annot_loader(annot_file)
 bg_file = config['FILES']['BEDGRAPH']
 with open(bg_file, 'r') as bg:
 
-    ## LOOP OVER ANNOTATIONS ##################################################
+## MAIN LOOP OVER ANNOTATIONS =================================================
     for chromosome, annotations in annot_dict.items():
 
         for region, gene_id in annotations.items():
@@ -90,6 +90,16 @@ with open(bg_file, 'r') as bg:
             )
 
             # Fit
+            fit = fr.vi_fit(
+                liet.model,
+                method=config['FIT']['METHOD'],
+                optimizer=config['FIT']['OPTIMIZER'],
+                learning_rate=config['FIT']['LEARNING_RATE'],
+                start=None,                                                 # NEEDS IMPLEMENTATION
+                iterations=config['FIT']['ITERATIONS'],
+                tolerance=config['FIT']['TOLERANCE'],                       # NEED TO FIX IMPLEMENTATION
+                param_tracker=False,                                        # NEEDS IMPLEMENTATION
+            )
             
 # Summarize posteriors
 # Evaluate "best fit" values

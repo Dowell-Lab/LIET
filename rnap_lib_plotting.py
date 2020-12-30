@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import rnap_lib_data_sim as ds
 
 #==============================================================================
+
 def convergence_plot(
         inference=None, 
         tracker=None, 
@@ -87,7 +88,7 @@ def convergence_plot(
         std_ax.plot(tracker['std'])
         std_ax.set_title('Std tracker')
         std_ax.set_xlabel('Iterations')
-        
+
     else:
         return 0
 
@@ -99,6 +100,7 @@ def convergence_plot(
 
 
 #==============================================================================
+
 def LIET_plot(
         liet_class, 
         stat='mean',
