@@ -36,31 +36,31 @@ def vi_fit(
     model : pymc3 model object
         ...
 
-    method : string
+    method : str
         ...
 
-    optimizer : string
+    optimizer : str
         ...
 
     learning_rate : float
         ...
     
-    start : dictionary
+    start : dict
         ...
 
-    iterations : integer
+    iterations : int
         ...
 
     tolerance : float
         ...
 
-    param_tracker : boolian
+    param_tracker : bool
         ...
 
 
     Returns
     -------
-    fit : dictionary
+    fit : dict
         ...
         
     '''
@@ -146,67 +146,118 @@ def vi_fit(
 
 #==============================================================================
 
-# def posterior_stats(
-#     posterior_samples,
-#     mean=True,
-#     mode=True,
-#     median=False,
-#     stdev=True,
-#     skew=False
-# ):
-#     '''
-#     Compute specified stats for the posterior samples.
-#     '''
+def posterior_stats(
+    post_approx,
+    N=10000,
+    mean=True,
+    mode=True,
+    median=False,
+    stdev=True,
+    skew=False
+):
+    '''
+    Compute specified stats for the posterior samples.
 
-#     # Mode computing function that uses guassian kde to smooth empirical dist
-#     def kde_mode(samples, tol=1e-2):
-#         '''
-#         Computes the mode of the distribution after applying a guassian kde
-#         '''
-#         smin = min(samples)
-#         smax = max(samples)
-#         N = int((smax - smin)/tol)
+    Parameters
+    ----------
+    post_approx : pymc3 variational approximation object
+        The object that results from running the '.fit()' method on the pymc3 
+        variational object (produced by vi_fit() function). Must possess a 
+        '.sample()' method.
+
+    N : int
+        Number of samples to generate from the posterior approximation.
+
+    mean : bool
+        Indicate whether or not to return the mean of the posteriors.
+    
+    mode : bool
+        Indicate whether or not to return the mode of the posteriors.
+
+    median : bool
+        Indicate whether or not to return the median of the posteriors.
+
+    stdev : bool
+        Indicate whether or not to return the standard deviation of the 
+        posteriors.
+    
+    skew : bool
+        Indicate whether or not to return the skew of the posteriors.
+
+
+    Returns
+    -------
+        post_stats : dict
+            Dictionary containing the specified stats for each of the params.
+    '''
+    # Sample approximation
+    posterior_samples = post_approx.sample(N)
+
+    # Filter out transformed variable names
+    params = [e for e in posterior_samples.varnames if e[-2:] != '__']
+
+    # Mode computing function that uses guassian kde to smooth empirical dist
+    def kde_mode(samples, tol=1e-2):
+        '''
+        Computes the mode of the distribution after applying a guassian kde
+        '''
+        smin = min(samples)
+        smax = max(samples)
+        N = int((smax - smin)/tol)
         
-#         samp_kde = sp.stats.gaussian_kde(samples)
-#         x = np.linspace(smin, smax, N)
-#         y = samp_kde.pdf(x)
+        samp_kde = sp.stats.gaussian_kde(samples)
+        x = np.linspace(smin, smax, N)
+        y = samp_kde.pdf(x)
 
-#         mode = max(zip(x,y), key = lambda x : x[1])[0]
+        mode = max(zip(x,y), key = lambda x : x[1])[0]
 
-#         return mode
+        return mode
 
+# Compute the stats for parameter var
+    post_stats = {}
+    for p in params:
 
-#     for p in self._pmap.keys():
+        try:
+            samps = posterior_samples[p][:]
 
-#         try:
-#             # Pad the w_b weight with zeros, if it was not part of fit
-#             if p == 'w':
-#                 samps = self.results['posteriors'][p][:]
-#                 zeros = np.zeros((len(samps), 1))
-#                 samps = np.concatenate((samps, zeros), axis=1)
+            if mean:
+                mean = np.mean(samps, axis=0)
+            else:
+                mean = None
 
-#             else:
-#                 samps = self.results['posteriors'][p][:]
+            if median:
+                median = np.median(samps, axis=0)
+            else:
+                median = None
 
-#             # Compute the stats for parameter p
-#             mean = np.mean(samps, axis=0)
-#             median = np.median(samps, axis=0)
-#             std = sp.stats.tstd(samps, axis=0)
-# #                mode = sp.stats.mode(samps, axis=0)[0][0]
-#             mode = kde_mode(samps)
-#             skew = sp.stats.skew(samps, axis=0)
-#             skewtest = sp.stats.skewtest(samps, axis=0).pvalue
+            if stdev:
+                stdev = sp.stats.tstd(samps, axis=0)
+            else:
+                stdev = None
 
-#             self.results[p] = {
-#                 'mean': mean,
-#                 'median': median,
-#                 'std': std,
-#                 'mode': mode,
-#                 'skew': skew,
-#                 'skewtest': skewtest
-#             }
+            if mode:
+                mode = kde_mode(samps)
+            else:
+                mode = None
 
-#         except:
-#             print(f"WARNING: Posterior for {p} not present.")
-#             continue
-        
+            if skew:
+                skew = sp.stats.skew(samps, axis=0)
+                skewtest = sp.stats.skewtest(samps, axis=0).pvalue
+            else:
+                skew = None
+                skewtest = None
+
+            post_stats[p] = {
+                'mean': mean,
+                'median': median,
+                'stdev': stdev,
+                'mode': mode,
+                'skew': skew,
+                'skewtest': skewtest
+            }
+
+        except:
+            print(f"WARNING: Posterior for {p} not present.")
+            continue
+
+    return post_stats
