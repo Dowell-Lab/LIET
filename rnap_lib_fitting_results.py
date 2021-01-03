@@ -201,63 +201,82 @@ def posterior_stats(
         '''
         Computes the mode of the distribution after applying a guassian kde
         '''
-        smin = min(samples)
-        smax = max(samples)
-        N = int((smax - smin)/tol)
-        
-        samp_kde = sp.stats.gaussian_kde(samples)
-        x = np.linspace(smin, smax, N)
-        y = samp_kde.pdf(x)
+        modes = np.array([])
 
-        mode = max(zip(x,y), key = lambda x : x[1])[0]
+        if np.size(np.shape(samples)) > 1:
+            for col_samp in samples.T:
+
+                smin = min(col_samp)
+                smax = max(col_samp)
+                N = int((smax - smin)/tol)
+                
+                samp_kde = sp.stats.gaussian_kde(col_samp)
+                x = np.linspace(smin, smax, N)
+                y = samp_kde.pdf(x)
+
+                mode = max(zip(x,y), key = lambda x : x[1])[0]
+                modes = np.append(modes, mode)
+        
+        else:
+            smin = min(samples)
+            smax = max(samples)
+            N = int((smax - smin)/tol)
+            
+            samp_kde = sp.stats.gaussian_kde(samples)
+            x = np.linspace(smin, smax, N)
+            y = samp_kde.pdf(x)
+
+            mode = max(zip(x,y), key = lambda x : x[1])[0]
+            modes = np.append(modes, mode)
 
         return mode
 
-# Compute the stats for parameter var
+# Compute the stats for parameters in params
     post_stats = {}
     for p in params:
 
-        try:
-            samps = posterior_samples[p][:]
+#        try:
+        samps = posterior_samples[p][:]
 
-            if mean:
-                mean = np.mean(samps, axis=0)
-            else:
-                mean = None
+        if mean:
+            mean = np.mean(samps, axis=0)
+        else:
+            mean = None
 
-            if median:
-                median = np.median(samps, axis=0)
-            else:
-                median = None
+        if median:
+            median = np.median(samps, axis=0)
+        else:
+            median = None
 
-            if stdev:
-                stdev = sp.stats.tstd(samps, axis=0)
-            else:
-                stdev = None
+        if stdev:
+            stdev = sp.stats.tstd(samps, axis=0)
+        else:
+            stdev = None
 
-            if mode:
-                mode = kde_mode(samps)
-            else:
-                mode = None
+        if mode:
+            
+            mode = kde_mode(samps)
+        else:
+            mode = None
 
-            if skew:
-                skew = sp.stats.skew(samps, axis=0)
-                skewtest = sp.stats.skewtest(samps, axis=0).pvalue
-            else:
-                skew = None
-                skewtest = None
+        if skew:
+            skew = sp.stats.skew(samps, axis=0)
+            skewtest = sp.stats.skewtest(samps, axis=0).pvalue
+        else:
+            skew = None
+            skewtest = None
 
-            post_stats[p] = {
-                'mean': mean,
-                'median': median,
-                'stdev': stdev,
-                'mode': mode,
-                'skew': skew,
-                'skewtest': skewtest
-            }
+        post_stats[p] = {
+            'mean': mean,
+            'median': median,
+            'stdev': stdev,
+            'mode': mode,
+            'skew': skew,
+            'skewtest': skewtest
+        }
 
-        except:
-            print(f"WARNING: Posterior for {p} not present.")
-            continue
+#        except:
+#            print(f"WARNING: Posterior for {p} not present.")
+#            continue
 
     return post_stats
