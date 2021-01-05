@@ -111,6 +111,9 @@ class LIET:
     ):
         strand_dict = {'+': 1, '-': -1, 1: 1, -1: -1}
     
+        if int(stop) < int(start):
+            raise ValueError("Stop/start values have incorrect orientation.")
+        
         annot_dict = {
             'gene_id': str(gene_id),
             'chrom': str(chrom),
@@ -136,19 +139,19 @@ class LIET:
 
         if shift is True:
             # Orient reads to positive strand and shift gene start to bp = 0
-#            if strand == 1:
-            positions = np.array(positions) - start
-            pos_reads = np.array(pos_reads) - start
-            neg_reads = (np.array(neg_reads) - start) * (-1)
-            neg_reads = np.flip(neg_reads, axis=0)
-#            elif strand == -1:
-#                positions = (np.array(positions) - stop) * (-1)
-#                positions = np.flip(positions, axis=0)
-#                pos_reads = np.array(pos_reads) - stop
-#                neg_reads = (np.array(neg_reads) - stop) * (-1)
-#                neg_reads = np.flip(neg_reads, axis=0)
-#            else:
-#                raise ValueError("Must specify +1 or -1 for strand.")
+            if strand == 1:
+                positions = np.array(positions) - start
+                pos_reads = np.array(pos_reads) - start
+                neg_reads = (np.array(neg_reads) - start) * (-1)               # This section still needs to be evaluated for correctness.
+                neg_reads = np.flip(neg_reads, axis=0)
+            elif strand == -1:
+                positions = (np.array(positions) - stop) * (-1)
+                positions = np.flip(positions, axis=0)
+                pos_reads = np.array(pos_reads) - stop
+                neg_reads = (np.array(neg_reads) - stop) * (-1)
+                neg_reads = np.flip(neg_reads, axis=0)
+            else:
+                raise ValueError("Must specify +1 or -1 for strand.")
 
             self.data['shift'] = True
 
