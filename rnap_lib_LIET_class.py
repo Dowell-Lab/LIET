@@ -110,7 +110,8 @@ class LIET:
         strand=None
     ):
         strand_dict = {'+': 1, '-': -1, 1: 1, -1: -1}
-    
+
+        # Check that start is upstream of stop, regardless of strand
         if int(stop) < int(start):
             raise ValueError("Stop/start values have incorrect orientation.")
         
