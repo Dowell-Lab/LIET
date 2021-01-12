@@ -25,7 +25,7 @@ bg_file = config['FILES']['BEDGRAPH']
 try:
     with open(bg_file, 'r') as bg:
 
-    ## MAIN LOOP OVER ANNOTATIONS =================================================
+        ## MAIN LOOP OVER ANNOTATIONS =========================================
         for chromosome, annotations in annot_dict.items():
 
             for region, gene_id in annotations.items():
@@ -105,11 +105,11 @@ try:
                     param_tracker=False,                                        # NEEDS IMPLEMENTATION
                 )
 
-    ## Currently omitting these steps =============================================
-    # Evaluate "best fit" values
-    # Evaluate whether or not to refit 
-    # Run refit if convergence criteria not met
-    ## ============================================================================
+                ## Currently omitting these steps =============================
+                # Evaluate "best fit" values
+                # Evaluate whether or not to refit 
+                # Run refit if convergence criteria not met
+                ## ============================================================
 
                 # Summarize posteriors
                 post_stats = fr.posterior_stats(
@@ -123,7 +123,8 @@ try:
                 )
 
                 # Record results of fitting
-                fr.results_record()
+                res = fr.results_format(gene_id, post_stats, stat='mean')
+                res_file.write(res)
 
 except:
     res_file.write("RUN ERROR")
