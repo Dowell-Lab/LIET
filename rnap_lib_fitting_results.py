@@ -1,6 +1,7 @@
 import numpy as np
 import scipy as sp
 import pymc3 as pm
+import time
 
     #VI options: ADVI, NFVI, FullRankADVI, NFVI, SVGD, KLqp
 
@@ -235,48 +236,120 @@ def posterior_stats(
     post_stats = {}
     for p in params:
 
-#        try:
-        samps = posterior_samples[p][:]
+        try:
+            samps = posterior_samples[p][:]
 
-        if mean:
-            mean = np.mean(samps, axis=0)
-        else:
-            mean = None
+            if mean:
+                mean = np.mean(samps, axis=0)
+            else:
+                mean = None
 
-        if median:
-            median = np.median(samps, axis=0)
-        else:
-            median = None
+            if median:
+                median = np.median(samps, axis=0)
+            else:
+                median = None
 
-        if stdev:
-            stdev = sp.stats.tstd(samps, axis=0)
-        else:
-            stdev = None
+            if stdev:
+                stdev = sp.stats.tstd(samps, axis=0)
+            else:
+                stdev = None
 
-        if mode:
-            
-            mode = kde_mode(samps)
-        else:
-            mode = None
+            if mode:
+                
+                mode = kde_mode(samps)
+            else:
+                mode = None
 
-        if skew:
-            skew = sp.stats.skew(samps, axis=0)
-            skewtest = sp.stats.skewtest(samps, axis=0).pvalue
-        else:
-            skew = None
-            skewtest = None
+            if skew:
+                skew = sp.stats.skew(samps, axis=0)
+                skewtest = sp.stats.skewtest(samps, axis=0).pvalue
+            else:
+                skew = None
+                skewtest = None
 
-        post_stats[p] = {
-            'mean': mean,
-            'median': median,
-            'stdev': stdev,
-            'mode': mode,
-            'skew': skew,
-            'skewtest': skewtest
-        }
+            post_stats[p] = {
+                'mean': mean,
+                'median': median,
+                'stdev': stdev,
+                'mode': mode,
+                'skew': skew,
+                'skewtest': skewtest
+            }
 
-#        except:
-#            print(f"WARNING: Posterior for {p} not present.")
-#            continue
+        except:
+            print(f"WARNING: Posterior for {p} not present.")
+            continue
 
     return post_stats
+
+
+
+# RESULTS AND LOG FILE HANDLING ===============================================
+
+def res_file_init(res_file, config_file_path):
+    '''
+    Parameters
+    ----------
+    file : python file object
+        Results file that will contain the fit results.
+    
+    config_file_path : str
+        Full path to the config file used for LIET run.
+
+
+    Returns
+    -------
+    Null
+    '''
+    # Time stamp
+    t=time.localtime()
+    tformat = time.strftime("%H:%M:%S %d.%m.%Y", t)
+    time_str = f"# {tformat}\n"
+    res_file.write(time_str)
+
+    # Config
+    res_file.write(f"CONFIG\t{config_file_path}\n")
+
+    # Output format
+    res_file.write("# HOW AM I FORMATTING THE OUTPUT?\n")
+
+    res_file.write("#" + "="*79 + "\n")
+
+
+
+def results_format(gene_id, post_stats, stat='mean', decimals=4):
+    '''
+    Parameters
+    ----------
+    gene_id : str
+        Gene ID for which the fit results are being recorded
+
+    post_stats : dict
+        Dictionary returned by .posterior_stats() which contains the best fit 
+        results for the parameters to be written to results file.
+
+    stat : str
+        Statistical value to include for each of the parameters. Must be one 
+        of the following: 'mean', 'median', or 'mode'. Default: 'mean'
+
+
+    Returns
+    -------
+    res : str
+        Formatted string containing the gene ID and fit values for each 
+        parameter. 
+    '''
+
+    fields = list([gene_id])
+
+    for pname, pvals in post_stats.items():
+        
+        pval = np.around(pvals[stat], decimals=decimals)
+        pstd = np.around(pvals['stdev'], decimals=decimals)
+
+        pstring = f"{pname}={pval}:{pstd}"
+        fields.append(pstring)
+
+    res = "\t".join(fields) + "\n"
+
+    return res
