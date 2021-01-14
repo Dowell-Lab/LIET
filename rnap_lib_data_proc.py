@@ -76,7 +76,7 @@ def config_loader(config_file):
     '''
 
     def float_int_cast(val):
-        if '.' in val:
+        if '.' in val or 'e' in val:
             try:
                 return float(val)
             except:
@@ -102,7 +102,7 @@ def config_loader(config_file):
         'MODEL': {}, 
         'PRIORS': {}, 
         'DATA_PROC': {}, 
-        'FITTING': {}, 
+        'FIT': {}, 
         'RESULTS': {}
     }
 
@@ -124,7 +124,7 @@ def config_loader(config_file):
 
             pname = str(line[0])
             pval = str(line[1])
-
+            # PRIORS
             if pname in prior_names:
                 #pval = [e.strip() for e in pval.strip().split(',')]
                 #pval = [pval[0], [float_int_cast(e) for e in pval[1:]]]
@@ -140,22 +140,20 @@ def config_loader(config_file):
                     else:
                         pval_dict[p[0]] = float_int_cast(p[1])
                 config[category][pname] = pval_dict
-
+            # FILES
             elif (pname == 'ANNOTATION' or 
                 pname == 'BEDGRAPH' or
                 pname == 'RESULTS'):
                 config[category][pname] = pval
-
-            elif pname == 'ANTISENSE':
+            # MODEL
+            elif pname == 'ANTISENSE' or pname == 'BACKGROUND':
                 config[category][pname] = bool_cast(pval)
-            elif pname == 'BACKGROUND':
-                config[category][pname] = bool_cast(pval)
-
+            # DATA_PROC
             elif pname == 'RANGE_SHIFT':
                 config[category][pname] = bool_cast(pval)
             elif pname == 'PAD':
                 config[category][pname] = float_int_cast(pval)
-
+            # FIT
             elif pname == 'ITERATIONS':
                 pval = float_int_cast(pval)
                 if isinstance(pval, int):
@@ -168,6 +166,23 @@ def config_loader(config_file):
                     config[category][pname] = pval
                 else:
                     raise ValueError(f"Input {pname} must be a float.")
+            elif (pname == 'METHOD' or
+                pname == 'OPTIMIZER'):
+                config[category][pname] = pval
+            elif pname == 'MEANFIELD':
+                config[category][pname] = bool_cast(pval)
+            elif pname == 'TOLERANCE':
+                config[category][pname] = float_int_cast(pval)
+            # RESULTS
+            elif pname == 'SAMPLES':
+                pval = float_int_cast(pval)
+                if isinstance(pval, int):
+                    config[category][pname] = pval
+                else:
+                    raise ValueError(f"Input {pname} must be an integer.")
+            elif pname in ['MEAN', 'MODE', 'MEDIAN', 'STDEV', 'SKEW']:
+                config[category][pname] = bool_cast(pval)
+
             else:
                 raise ValueError(f"Incorrect input parameter: {pname}")
     
