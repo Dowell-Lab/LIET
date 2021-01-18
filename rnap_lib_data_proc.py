@@ -286,6 +286,189 @@ def prior_config_old(priors, tss, tts):
 
 # BEDGRAPH HANDLING ===========================================================
 
+chr_order = {
+        'chr1':1, 'chr2':2, 'chr3':3, 'chr4':4, 'chr5':5, 'chr6':6, 'chr7':7, 'chr8':8, 'chr9':9,
+        'chr10':10, 'chr11':11, 'chr12':12, 'chr13':13, 'chr14':14, 'chr15':15, 'chr16':16, 'chr17':17,
+        'chr18':18, 'chr19':19, 'chr20':20, 'chr21':21, 'chr22':22, 'chr23':23, 'chrX':24, 'chrY':25
+
+}
+
+def bgline_cast(bgline):
+    '''Casts the bgline (str) as a list with proper data types'''
+    bglist = bgline.strip().split("\t")
+    bglist[1] = int(bglist[1])
+    bglist[2] = int(bglist[2])
+    bglist[3] = int(bglist[3])
+    return bglist
+
+
+def bg2d(bglist):
+    '''Convert bedgraph line <bglist> (len-4 list) to a read dict'''
+    start = int(bglist[1])
+    stop = int(bglist[2])
+    count = int(bglist[3])
+    
+    if count >= 0:
+        preads = {i:count for i in range(start, stop)}
+        nreads = {}
+        return preads, nreads
+    else:
+        preads = {}
+        nreads = {i:-count for i in range(start, stop)}
+        return preads, nreads
+
+    
+def bg2l(bglist):
+    '''Convert bedgraph line <bglist> (len-4 list) to a read list'''
+    start = int(bglist[1])
+    stop = int(bglist[2])
+    count = int(bglist[3])
+    
+    if count >= 0:
+        preads = []
+        nreads = []
+        for i in range(start, stop):
+            preads.extend([i]*count)
+        return preads, nreads
+    else:
+        preads = []
+        nreads = []
+        for i in range(start, stop):
+            nreads.extend([i]*-count)
+        return preads, nreads
+
+    
+def reads_d2l(readdict):
+    '''Convert bedgraph read dict to read list'''
+    readlist = []
+    for x, count in readdict.items():
+        readlist.extend([x]*count)
+        
+    return readlist
+
+
+def bglist_check(bglist, chromosome, begin, end):
+    '''
+    Checks if bglist is upstream, overlapping or downstream of annot. Returns 
+    +1, 0, -1 respectively. Annotation given by <chromosome>, <begin>, and 
+    <end>.
+    '''
+    chl = chr_order[bglist[0]]
+    cha = chr_order[chromosome]
+    i = bglist[1]
+    f = bglist[2]
+    
+    # bedgraph list on upstream chromosome or upstream on same chromosome
+    if chl < cha or (chl == cha and f < begin):
+        return 1
+    # bedgraph list on downstream chromosome or downstream on same chromosome
+    elif chl > cha or (chl == cha and i > end):
+        return -1
+    # bedgraph list is overlapping annotation
+    else:
+        return 0
+
+
+def add_bgd(bglist, begin, end, preads, nreads):
+    '''
+    Adds reads from <bglist> to read dictionaries <preads> and <nreads> for 
+    annotation ranging from <begin> to <end>.
+    '''
+    ch, i, f, ct = bglist
+    
+    p, n = bg2d([ch, max(i, begin), min(f, end), ct])
+    
+    preads.update(p)
+    nreads.update(n)
+
+
+def add_bgl(bglist, begin, end, preads, nreads):
+    '''
+    Adds reads from <bglist> to read lists <preads> and <nreads> for 
+    annotation ranging from <begin> to <end>.
+    '''
+    ch, i, f, ct = bglist
+    
+    p, n = bg2l([ch, max(i, begin), min(f, end), ct])
+    
+    preads.extend(p)
+    nreads.extend(n)
+
+
+def bgreads(bg, current_bgl, chromosome, begin, end):
+    '''
+    Primary method for processing bedgraph lines and converting them to read
+    lists appropriate for loading into LIET class instance. 
+
+    Parameters
+    ----------
+    bg : file object
+        Bedgraph file object containing read count data. Must be in standard 
+        four-column format (chr start stop count) and be sorted.
+    
+    current_bgl : list
+        List containing information from the most recent bedgraph line, prior 
+        to calling this function. Elements must be cast to appropriate data 
+        type. Format: [chr, start, stop, count]
+
+    chromosome : string
+        String specifying the chromosome of the annotation being evaluated. 
+        Must be in standard format: 'chr#'
+    
+    begin : int
+        First genomic coordinate of the annotation being evaluated.
+
+    end : int
+        Last genomic coordinate of the annotation being evaluated.
+
+
+    Returns
+    -------
+    bglist : list
+        List containing information from most recent bedgraph line. The first 
+        one downstream of annotation. Same format as <current_bgl>
+
+    preads : dict
+        Counter style dict containing the read counts on the positive strand 
+        between genomic coordinates <begin> and <end>
+
+    nreads : dict
+        Counter style dict containing the read counts on the negative strand 
+        between genomic coordinates <begin> and <end>
+    '''
+    preads = {}
+    nreads = {}
+    
+    # Process current line
+    loc = bglist_check(current_bgl, chromosome, begin, end)
+    # Overlapping
+    if loc == 0:
+        add_bgd(current_bgl, begin, end, preads, nreads)
+    # Downstream
+    elif loc == -1:
+        return current_bgl, preads, nreads
+    # Upstream
+    else:
+        pass
+    
+    # Iterate through bedgraph until reaching first downstream line
+    for bgline in bg:
+        bglist = bgline_cast(bgline)
+        loc = bglist_check(bglist, chromosome, begin, end)
+        
+        # Upstream
+        if loc == 1:
+            continue
+        # Overlap
+        elif loc == 0:
+            add_bgd(bglist, begin, end, preads, nreads)
+        # Downstream
+        elif loc == -1:
+            return bglist, preads, nreads
+
+
+#==============================================================================
+
 def gene_data(bedgraph, gene, pad_frac):
     '''
     Reads in BedGraph file for specified annotation ('gene' <dict>) and pads 
@@ -353,9 +536,18 @@ def rng_shift(gene, xvals, data):
 
 
 
-# NEW STUFF ===================================================================
+# UNSORTED STUFF ==============================================================
 
-def overlap_check(annotations, pad=0):
+def overlap_check2(begin1, end1, begin2, end2):
+    '''Checks if two intervals are overlapping'''
+    overlap = (end1 - begin2) * (end2 - begin1)
+    if overlap > 0:
+        return True
+    else:
+        return False
+
+
+def overlap_check3(annotations, pad=0):
     '''
     This function checks whether or not three sequential annotations are 
     overlapping for a given padding fraction. Returns 'True' or 'False'. The
@@ -409,7 +601,7 @@ def bg_iterator(bgfile, begin, end):
 
 
 
-def bgreads(bgfile, begin, end):
+def bgreads_old(bgfile, begin, end):
     '''
     Parameters
     ----------
