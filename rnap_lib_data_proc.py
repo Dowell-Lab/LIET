@@ -286,13 +286,6 @@ def prior_config_old(priors, tss, tts):
 
 # BEDGRAPH HANDLING ===========================================================
 
-chr_order = {
-        'chr1':1, 'chr2':2, 'chr3':3, 'chr4':4, 'chr5':5, 'chr6':6, 'chr7':7, 'chr8':8, 'chr9':9,
-        'chr10':10, 'chr11':11, 'chr12':12, 'chr13':13, 'chr14':14, 'chr15':15, 'chr16':16, 'chr17':17,
-        'chr18':18, 'chr19':19, 'chr20':20, 'chr21':21, 'chr22':22, 'chr23':23, 'chrX':24, 'chrY':25
-
-}
-
 def bgline_cast(bgline):
     '''Casts the bgline (str) as a list with proper data types'''
     bglist = bgline.strip().split("\t")
@@ -353,6 +346,13 @@ def bglist_check(bglist, chromosome, begin, end):
     +1, 0, -1 respectively. Annotation given by <chromosome>, <begin>, and 
     <end>.
     '''
+    chr_order = {
+        'chr1':1, 'chr2':2, 'chr3':3, 'chr4':4, 'chr5':5, 'chr6':6, 'chr7':7, 
+        'chr8':8, 'chr9':9, 'chr10':10, 'chr11':11, 'chr12':12, 'chr13':13, 
+        'chr14':14, 'chr15':15, 'chr16':16, 'chr17':17, 'chr18':18, 'chr19':19,
+        'chr20':20, 'chr21':21, 'chr22':22, 'chr23':23, 'chrX':24, 'chrY':25
+    }
+
     chl = chr_order[bglist[0]]
     cha = chr_order[chromosome]
     i = bglist[1]
