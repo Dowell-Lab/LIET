@@ -257,17 +257,12 @@ class LIET:
             
             if prior == None:
                 prior_type = None
-#                prior_spec = None
             else:
-#                prior_type = prior[0]                      ## If the dict priors are working, I can remove all these commented "prior_spec" lines in this function
-#                prior_spec = prior[1]
                 prior_type = prior['dist']
 
             # Uniform prior
             if prior_type == 'uniform':
                 with self.model:
-#                    start = prior_spec[0]
-#                    stop = prior_spec[1]
                     start = prior['lower']
                     stop = prior['upper']
                     self._pmap[var_name] = pm.Uniform(
@@ -277,8 +272,6 @@ class LIET:
             # Guassian prior
             elif prior_type == 'normal':
                 with self.model:
-#                    norm_mu = prior_spec[0]
-#                    norm_sig = prior_spec[1]
                     norm_mu = prior['mu']
                     norm_sig = prior['sigma']
                     self._pmap[var_name] = pm.Normal(
@@ -287,8 +280,6 @@ class LIET:
 
             # Exponential prior
             elif prior_type == 'exponential':
-#                exp_lam = prior_spec[0]
-#                offset = prior_spec[1]
                 exp_lam = prior['lambda']
                 offset = prior['offset']
                 if offset == 0:
@@ -307,9 +298,6 @@ class LIET:
 
             # Gamma prior
             elif prior_type == 'gamma':
-#                gamma_mu = prior_spec[0]
-#                gamma_sig = prior_spec[1]
-#                offset = prior_spec[2]
                 gamma_mu = prior['mu']
                 gamma_sig = prior['sigma']
                 offset = prior['offset']
@@ -329,9 +317,6 @@ class LIET:
 
             # Wald prior
             elif prior_type == 'wald':
-#                wald_mu = prior_spec[0]
-#                wald_lam = prior_spec[1]
-#                wald_alph = prior_spec[2]
                 wald_mu = prior['mu']
                 wald_lam = prior['lambda']
                 wald_alph = prior['alpha']
@@ -342,10 +327,6 @@ class LIET:
 
             # Dirichlet prior
             elif prior_type == 'dirichlet':
-#                if prior_spec[3] != 0.0:
-#                    alpha = prior_spec
-#                else:
-#                    alpha = prior_spec[:3]
                 alpha = [prior['alpha_LI'], prior['alpha_E'], 
                     prior['alpha_T'], prior['alpha_B']]
 
@@ -357,7 +338,6 @@ class LIET:
             # Constant 
             elif prior_type == 'constant':
                 with self.model:
-#                    const = prior_spec[0]
                     const = prior['value']
                     self._pmap[var_name] = pm.Deterministic(
                         var_name, T.constant(const)
@@ -525,7 +505,7 @@ class LIET:
 
                 w_a = [self.priors['w']['alpha_LI'], 
                     self.priors['w']['alpha_B']]
-
+                
                 with self.model:
                     w_a = pm.Dirichlet('w_a', a=np.array(w_a))
 
