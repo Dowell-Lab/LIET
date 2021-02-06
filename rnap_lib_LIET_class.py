@@ -382,15 +382,24 @@ class LIET:
                 # z = (x - mu) / sigma
                 def _norm_cdf(z):
                     return 0.5 * (1 + T.erf(z / T.sqrt(2.0)))
+# OLD APPROACH
+#                z = (x - mu) / sigma
+#                k = sigma / tau
+#                exparg = 0.5*(k**2) - z*k
+#                cdf =  _norm_cdf(z) - T.exp(exparg) * _norm_cdf(z - k)
 
                 z = (x - mu) / sigma
-                k = sigma / tau
+                invK = sigma / tau
 
-                exparg = 0.5*(k**2) - z*k
-                cdf =  _norm_cdf(z) - T.exp(exparg) * _norm_cdf(z - k)
+                exparg = invK * (0.5 * invK - z)
+                # Sum of logs instead of product avoids overflow error
+                logprod = exparg + T.log(_norm_cdf(z - invK))
+                # Abs to avoid neg vals in diff at small prob (rounding error)
+                cdf = T.abs_(_norm_cdf(z) - T.exp(logprod))
+
                 return cdf
-    
-    
+
+
             def _norm_sf(x, mu, sigma):
                 arg = (x - mu) / (sigma * T.sqrt(2.0))
                 return 0.5 * T.erfc(arg)
@@ -413,7 +422,7 @@ class LIET:
                 )
 
                 # Compute norm factor by integrating over entire distribution
-                _n = 10 #number of stdevs
+                _n = 10 #number of stdevs for numerical normalization
                 _min = T.min([
                     self._pmap['mL'] - _n*self._pmap['sL'], 
                     self._pmap['mT'] - _n*self._pmap['sT']
@@ -465,11 +474,18 @@ class LIET:
 
         # Define sense-strand full model (with or without background)
         if background == True and self.priors['w']['alpha_B'] != 0:
+            
+            xmin = -1 + min(
+                self.data['pos_reads'].min(), 
+                self.data['neg_reads'].min()
+            )
+            xmax = 1 + max(
+                self.data['pos_reads'].max(), 
+                self.data['neg_reads'].max()
+            )
             with self.model:
-                back_pdf = pm.Uniform.dist(
-                    lower=self.data['coord'][0], 
-                    upper=self.data['coord'][-1]
-                )
+                back_pdf = pm.Uniform.dist(lower=xmin, upper=xmax)
+
             components = [LI_pdf, E_pdf, T_pdf, back_pdf]
         else:
             components = [LI_pdf, E_pdf, T_pdf]
