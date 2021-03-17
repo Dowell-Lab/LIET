@@ -10,7 +10,10 @@ import scipy as sp
 import pymc3 as pm
 import rnap_lib_data_sim as ds
 
-import theano.tensor as T
+import theano.tensor as tt
+import theano
+#theano.config.exception_verbosity='high'
+#theano.config.compute_test_value='warn'
 
 import matplotlib.pyplot as plt
 
@@ -49,9 +52,9 @@ class LIET:
         }
         self.data = {
             'annot': annot_dict,
-            'coord': np.array([], dtype='int32'),
-            'pos_reads': np.array([], dtype='int32'),
-            'neg_reads': np.array([], dtype='int32'),
+            'coord': np.array([], dtype='int64'),
+            'pos_reads': np.array([], dtype='int64'),
+            'neg_reads': np.array([], dtype='int64'),
             'shift': False,
             'pad': 0
         }
@@ -60,7 +63,7 @@ class LIET:
         self.model = None
 
         # Full priors map (including the offsets)
-        self._pmap = {
+        self._p = {
             'mL': None, 
             'sL': None, 
             'tI': None, 
@@ -72,7 +75,7 @@ class LIET:
             'tI_a': None
         }
         # Base priors map (pre offsets)
-        self._omap = {
+        self._o = {
             'mL': None, 
             'sL': None, 
             'tI': None, 
@@ -84,7 +87,7 @@ class LIET:
             'tI_a': None
         }
 
-        self.priors = {p:None for p in self._pmap.keys()}
+        self.priors = {p:None for p in self._p.keys()}
 
         self.results = {
             'posteriors': None,
@@ -210,8 +213,10 @@ class LIET:
 
         Exponential
             Support: [offset, +inf)
-            Mean: (1 / lambda) + offset
-            Var: (1 / lambda)^2
+            OLD VERION: Mean: (1 / lambda) + offset
+            OLD VERSION: Var: (1 / lambda)^2
+            Mean : tau + offset
+            Var: tau^2
 
         Normal
             Support: (-inf, +inf) 
@@ -226,12 +231,13 @@ class LIET:
         Wald
             Support: (alpha, +inf)
             Mean: mu + alpha
-            Var: mu^3 / lambda
+            OLD VERSION: Var: mu^3 / lambda
+            Var: mu^3 * tau
         '''
 
         if priors:
             for p, prior in priors.items():
-                if p not in self._pmap.keys():
+                if p not in self._p.keys():
                     raise ValueError(f"'{p}' not acceptable parameter name")
                 else:
                     self.priors[p] = prior
@@ -265,7 +271,7 @@ class LIET:
                 with self.model:
                     start = prior['lower']
                     stop = prior['upper']
-                    self._pmap[var_name] = pm.Uniform(
+                    self._p[var_name] = pm.Uniform(
                         var_name, lower=start, upper=stop
                     )
 
@@ -274,26 +280,26 @@ class LIET:
                 with self.model:
                     norm_mu = prior['mu']
                     norm_sig = prior['sigma']
-                    self._pmap[var_name] = pm.Normal(
+                    self._p[var_name] = pm.Normal(
                         var_name, mu=norm_mu, sigma=norm_sig
                     )
 
             # Exponential prior
             elif prior_type == 'exponential':
-                exp_lam = prior['lambda']
+                exp_lam = 1 / prior['tau']
                 offset = prior['offset']
                 if offset == 0:
                     with self.model:
-                        self._pmap[var_name] = pm.Exponential(
+                        self._p[var_name] = pm.Exponential(
                             var_name, lam=exp_lam
                         )
                 else:
                     with self.model:
-                        self._omap[var_name] = pm.Exponential(
+                        self._o[var_name] = pm.Exponential(
                             var_name+'0', lam=exp_lam
                         )
-                        self._pmap[var_name] = pm.Deterministic(
-                            var_name, self._omap[var_name] + offset
+                        self._p[var_name] = pm.Deterministic(
+                            var_name, self._o[var_name] + offset
                         )
 
             # Gamma prior
@@ -303,25 +309,25 @@ class LIET:
                 offset = prior['offset']
                 if offset == 0:
                     with self.model:
-                        self._pmap[var_name] = pm.Gamma(
+                        self._p[var_name] = pm.Gamma(
                             var_name, mu=gamma_mu, sigma=gamma_sig
                         )
                 else:
                     with self.model:
-                        self._omap[var_name] = pm.Gamma(
+                        self._o[var_name] = pm.Gamma(
                             var_name+'0', mu=gamma_mu, sigma=gamma_sig
                         )
-                        self._pmap[var_name] = pm.Deterministic(
-                            var_name, self._omap[var_name] + offset
+                        self._p[var_name] = pm.Deterministic(
+                            var_name, self._o[var_name] + offset
                         )
 
             # Wald prior
             elif prior_type == 'wald':
                 wald_mu = prior['mu']
-                wald_lam = prior['lambda']
+                wald_lam = 1 / prior['tau']
                 wald_alph = prior['alpha']
                 with self.model:
-                    self._pmap[var_name] = pm.Wald(
+                    self._p[var_name] = pm.Wald(
                         var_name, mu=wald_mu, lam=wald_lam, alpha=wald_alph
                     )
 
@@ -331,7 +337,7 @@ class LIET:
                     prior['alpha_T'], prior['alpha_B']]
 
                 with self.model:
-                    self._pmap[var_name] = pm.Dirichlet(
+                    self._p[var_name] = pm.Dirichlet(
                         var_name, a=np.array(alpha)
                     )
             
@@ -339,8 +345,8 @@ class LIET:
             elif prior_type == 'constant':
                 with self.model:
                     const = prior['value']
-                    self._pmap[var_name] = pm.Deterministic(
-                        var_name, T.constant(const)
+                    self._p[var_name] = pm.Deterministic(
+                        var_name, tt.constant(const)
                     )
 
             # Check for None type prior
@@ -369,103 +375,110 @@ class LIET:
 
         # Define model components (LI, E, T) --- sense strand
         with self.model:
-
-            # Distribution for the Loading/Initiation phase (native to pymc3)
-            LI_pdf = pm.ExGaussian.dist(
-                mu=self._pmap['mL'], 
-                sigma=self._pmap['sL'], 
-                nu=self._pmap['tI']
-            )
-
             # Custom Elongation distribution ==================================
-            def _emg_cdf(x, mu, sigma, tau):
-                # z = (x - mu) / sigma
-                def _norm_cdf(z):
-                    return 0.5 * (1 + T.erf(z / T.sqrt(2.0)))
-# OLD APPROACH
+# OLDDEST APPROACH
+#            def _emg_cdf(x, mu, sigma, tau):
+#                # z = (x - mu) / sigma
+#                def _norm_cdf(z):
+#                    return 0.5 * (1 + tt.erf(z / tt.sqrt(2.0)))
+
 #                z = (x - mu) / sigma
 #                k = sigma / tau
 #                exparg = 0.5*(k**2) - z*k
-#                cdf =  _norm_cdf(z) - T.exp(exparg) * _norm_cdf(z - k)
+#                cdf =  _norm_cdf(z) - tt.exp(exparg) * _norm_cdf(z - k)
 
-                z = (x - mu) / sigma
-                invK = sigma / tau
+#                z = (x - mu) / sigma
+#                invK = sigma / tau
 
-                exparg = invK * (0.5 * invK - z)
+#                exparg = invK * (0.5 * invK - z)
                 # Sum of logs instead of product avoids overflow error
-                logprod = exparg + T.log(_norm_cdf(z - invK))
+#                logprod = exparg + tt.log(_norm_cdf(z - invK))
                 # Abs to avoid neg vals in diff at small prob (rounding error)
-                cdf = T.abs_(_norm_cdf(z) - T.exp(logprod))
+#                cdf = tt.abs_(_norm_cdf(z) - tt.exp(logprod))
 
-                return cdf
+#                return cdf
 
+            # CDF/logCDF components
+            def _emg_cdf(x, mu, sigma, tau):
+                lcdf = pm.ExGaussian.dist(mu=mu,sigma=sigma, nu=tau).logcdf(x)
+                return tt.exp(lcdf)
+            
+            def _log_emg_cdf(x, mu, sigma, tau):
+                return pm.ExGaussian.dist(mu=mu,sigma=sigma, nu=tau).logcdf(x)
 
             def _norm_sf(x, mu, sigma):
-                arg = (x - mu) / (sigma * T.sqrt(2.0))
-                return 0.5 * T.erfc(arg)
+                arg = (x - mu) / (sigma * tt.sqrt(2.0))
+                return 0.5 * tt.erfc(arg)
 
-            
+            def _log_norm_sf(x, mu, sigma):
+                return pm.distributions.dist_math.normal_lccdf(mu, sigma, x)
+
+
             def elong_logp(x):
-                # Unnormalized distribution value
-                _unscaled = (
-                    _emg_cdf(
-                        x, 
-                        mu=self._pmap['mL'], 
-                        sigma=self._pmap['sL'], 
-                        tau=self._pmap['tI']
-                    ) 
-                    *_norm_sf(
-                        x, 
-                        mu=self._pmap['mT'],
-                        sigma=self._pmap['sT']
-                    )
-                )
-
                 # Compute norm factor by integrating over entire distribution
                 _n = 10 #number of stdevs for numerical normalization
-                _min = T.min([
-                    self._pmap['mL'] - _n*self._pmap['sL'], 
-                    self._pmap['mT'] - _n*self._pmap['sT']
-                ])
-                _max = T.max([
-                    self._pmap['mL'] + _n*np.sqrt(self._pmap['sL']**2 
-                        + self._pmap['tI']**2), 
-                    self._pmap['mT'] + _n*self._pmap['sT']
-                ])
-                _x = T.arange(_min, _max)
-                
-                # Generate all values, to be summed for normalization factor
+                _min = tt.floor(tt.min([
+                    self._p['mL'] - _n*self._p['sL'], 
+                    self._p['mT'] - _n*self._p['sT']
+                ]))
+                _max = tt.ceil(tt.max([
+                    self._p['mL'] + _n*np.sqrt(self._p['sL']**2 
+                    + self._p['tI']**2), 
+                    self._p['mT'] + _n*self._p['sT']
+                ]))
+                _x = tt.arange(_min, _max, dtype="int64")
+
                 _norm_array = (
                     _emg_cdf(
                         _x, 
-                        mu=self._pmap['mL'], 
-                        sigma=self._pmap['sL'], 
-                        tau=self._pmap['tI']
-                    ) 
+                        mu=self._p['mL'], 
+                        sigma=self._p['sL'], 
+                        tau=self._p['tI']
+                    )
                     * _norm_sf(
                         _x, 
-                        mu=self._pmap['mT'], 
-                        sigma=self._pmap['sT']
+                        mu=self._p['mT'], 
+                        sigma=self._p['sT']
                     )
                 )
-                _norm_factor = T.sum(_norm_array)
-            
-                # Scale distribution to true pdf
-                elong_pdf = _unscaled / _norm_factor
+                _log_norm_factor = tt.log(tt.sum(_norm_array))
 
-                # Compute log-likelihood
-                log_pdf = np.log(elong_pdf)
+                # Unnormalized dist values (log(CDF*SF) = log(CDF) + log(SF))
+                _log_unscaled = (
+                    _log_emg_cdf(
+                        x, 
+                        mu=self._p['mL'], 
+                        sigma=self._p['sL'], 
+                        tau=self._p['tI']
+                    ) 
+                    + _log_norm_sf(
+                        x, 
+                        mu=self._p['mT'],
+                        sigma=self._p['sT']
+                    )
+                )
+
+                # Normalize distribution in logscale
+                log_pdf = _log_unscaled - _log_norm_factor
+
                 return log_pdf
                 #==============================================================
-    
+            # Debugging print statement (can remove later)
+#            mL_print = tt.printing.Print('mL')(self._p['mL'])
+
+            # Distribution for the Loading/Initiation phase (native to pymc3)
+            LI_pdf = pm.ExGaussian.dist(
+#                mu=mL_print,
+                mu=self._p['mL'], 
+                sigma=self._p['sL'], 
+                nu=self._p['tI']
+            )
+
             # Convert Theano log-prob func into pymc3 distribution variable
             E_pdf = pm.DensityDist.dist(elong_logp)
             
-            # Distribution for the Termination phase (native to pymc3)    
-            T_pdf = pm.Normal.dist(
-                mu=self._pmap['mT'], 
-                sigma=self._pmap['sT']
-            )
+            # Distribution for the Termination phase (native to pymc3)
+            T_pdf = pm.Normal.dist(mu=self._p['mT'], sigma=self._p['sT'])
 
         # Strand data dict used to reference self.data for 'observed' kwargs
         strand_ref = {1: 'pos_reads', -1: 'neg_reads'}
@@ -493,7 +506,7 @@ class LIET:
         with self.model:
             LIET_pdf = pm.Mixture(
                     'LIET_pdf',
-                    w=self._pmap['w'],
+                    w=self._p['w'],
                     comp_dists=components,
                     observed=self.data[sense_reads]
                 )
@@ -501,19 +514,19 @@ class LIET:
         # Define antisense-strand model (w/ or w/o bckgrnd or sep sL/tI priors)
         if antisense == True:
             if self.priors['sL_a'] != None:
-                s_a = self._pmap['sL_a']
+                s_a = self._p['sL_a']
             else:
-                s_a = self._pmap['sL']
+                s_a = self._p['sL']
 
             if self.priors['tI_a'] != None:
-                t_a = self._pmap['tI_a']
+                t_a = self._p['tI_a']
             else:
-                t_a = self._pmap['tI']
+                t_a = self._p['tI']
             
             if background == True and self.priors['w']['alpha_B'] != 0:
                 with self.model:
                     LI_a_pdf = pm.ExGaussian.dist(
-                        mu=self._pmap['mL_a'], 
+                        mu=self._p['mL_a'], 
                         sigma=s_a, 
                         nu=t_a
                     )
@@ -536,7 +549,7 @@ class LIET:
                 with self.model:
                     LIET_a_pdf = pm.ExGaussian(
                         'LIET_a_pdf',
-                        mu=self._pmap['mL_a'],
+                        mu=self._p['mL_a'],
                         sigma=s_a,
                         nu=t_a,
                         observed=self.data[antisense_reads]
@@ -571,7 +584,7 @@ class LIET:
             return mode
 
 
-        for p in self._pmap.keys():
+        for p in self._p.keys():
 
             try:
                 # Pad the w_b weight with zeros, if it was not part of fit
@@ -615,14 +628,14 @@ class LIET:
         if self.model:
             
             # Select non-None type parameters
-            non_none_params = [p for p, v in self._pmap.items() if v != None]
+            non_none_params = [p for p, v in self._p.items() if v != None]
 
             # Sample priors
             with self.model:
                 prior_samp = pm.sample_prior_predictive(
                     samples=10000, 
                     var_names=non_none_params
-                    #var_names = self._pmap.keys()
+                    #var_names = self._p.keys()
                 )
 
             # Plot priors
