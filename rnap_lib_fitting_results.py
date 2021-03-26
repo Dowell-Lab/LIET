@@ -87,6 +87,8 @@ def vi_fit(
         opt = pm.momentum()
     elif optimizer == 'rmsprop':
         opt = pm.rmsprop()
+    elif optimizer == None:
+        opt = None
     else:
         raise ValueError(f'Optimizer {optimizer} not an available option.')
 
@@ -133,7 +135,7 @@ def vi_fit(
         fit_dict['callbacks'] = callbacks
 
     # Run fit
-    approx = vi.fit(iterations, **fit_dict)
+    approx = vi.fit(iterations, progressbar=True, **fit_dict)
 
     # Add inference, approx, and tracker objects to output dict
     fit['vi'] = vi
@@ -150,11 +152,11 @@ def vi_fit(
 def posterior_stats(
     post_approx,
     N=10000,
-    mean=True,
-    mode=True,
-    median=False,
-    stdev=True,
-    skew=False
+    calc_mean=True,
+    calc_mode=False,
+    calc_median=False,
+    calc_stdev=True,
+    calc_skew=False
 ):
     '''
     Compute specified stats for the posterior samples.
@@ -169,20 +171,20 @@ def posterior_stats(
     N : int
         Number of samples to generate from the posterior approximation.
 
-    mean : bool
+    calc_mean : bool
         Indicate whether or not to return the mean of the posteriors.
     
-    mode : bool
+    calc_mode : bool
         Indicate whether or not to return the mode of the posteriors.
 
-    median : bool
+    calc_median : bool
         Indicate whether or not to return the median of the posteriors.
 
-    stdev : bool
+    calc_stdev : bool
         Indicate whether or not to return the standard deviation of the 
         posteriors.
     
-    skew : bool
+    calc_skew : bool
         Indicate whether or not to return the skew of the posteriors.
 
 
@@ -215,8 +217,8 @@ def posterior_stats(
                 x = np.linspace(smin, smax, N)
                 y = samp_kde.pdf(x)
 
-                mode = max(zip(x,y), key = lambda x : x[1])[0]
-                modes = np.append(modes, mode)
+                mode_val = max(zip(x,y), key = lambda x : x[1])[0]
+                modes = np.append(modes, mode_val)
         
         else:
             smin = min(samples)
@@ -236,49 +238,49 @@ def posterior_stats(
     post_stats = {}
     for p in params:
 
-        try:
-            samps = posterior_samples[p][:]
+#        try:
+        samps = posterior_samples[p][:]
 
-            if mean:
-                mean = np.mean(samps, axis=0)
-            else:
-                mean = None
+        if calc_mean:
+            mean_val = np.mean(samps, axis=0)
+            
+        else:
+            mean_val = None
 
-            if median:
-                median = np.median(samps, axis=0)
-            else:
-                median = None
+        if calc_median:
+            median_val = np.median(samps, axis=0)
+        else:
+            median_val = None
 
-            if stdev:
-                stdev = sp.stats.tstd(samps, axis=0)
-            else:
-                stdev = None
+        if calc_stdev:
+            stdev_val = sp.stats.tstd(samps, axis=0)
+        else:
+            stdev_val = None
 
-            if mode:
-                
-                mode = kde_mode(samps)
-            else:
-                mode = None
+        if calc_mode:
+            mode_val = kde_mode(samps)
+        else:
+            mode_val = None
 
-            if skew:
-                skew = sp.stats.skew(samps, axis=0)
-                skewtest = sp.stats.skewtest(samps, axis=0).pvalue
-            else:
-                skew = None
-                skewtest = None
+        if calc_skew:
+            skew_val = sp.stats.skew(samps, axis=0)
+            skewtest_val = sp.stats.skewtest(samps, axis=0).pvalue
+        else:
+            skew_val = None
+            skewtest_val = None
 
-            post_stats[p] = {
-                'mean': mean,
-                'median': median,
-                'stdev': stdev,
-                'mode': mode,
-                'skew': skew,
-                'skewtest': skewtest
-            }
+        post_stats[p] = {
+            'mean': mean_val,
+            'median': median_val,
+            'stdev': stdev_val,
+            'mode': mode_val,
+            'skew': skew_val,
+            'skewtest': skewtest_val
+        }
 
-        except:
-            print(f"WARNING: Posterior for {p} not present.")
-            continue
+#       except:
+#            print(f"WARNING: Can't compute stat for {p}.")
+#            continue
 
     return post_stats
 
@@ -290,7 +292,7 @@ def res_file_init(res_file, config_file_path):
     '''
     Parameters
     ----------
-    file : python file object
+    res_file : python file object
         Results file that will contain the fit results.
     
     config_file_path : str
@@ -311,13 +313,39 @@ def res_file_init(res_file, config_file_path):
     res_file.write(f"CONFIG\t{config_file_path}\n")
 
     # Output format
-    res_file.write("# HOW AM I FORMATTING THE OUTPUT?\n")
+    res_file.write("# Output: param_name=value:stdev\n")
 
     res_file.write("#" + "="*79 + "\n")
 
 
+def log_file_init(log_file, config_file_path)
+    '''
+    Parameters
+    ----------
+    log_file : python file object
+        Log file associated with corresponding results file.
+    
+    config_file_path : str
+        Full path to the config file used for LIET run.
 
-def results_format(gene_id, post_stats, stat='mean', decimals=4):
+
+    Returns
+    -------
+    Null
+    '''
+    # Time stamp
+    t=time.localtime()
+    tformat = time.strftime("%H:%M:%S %d.%m.%Y", t)
+    time_str = f"# {tformat}\n"
+    log_file.write(time_str)
+
+    # Config
+    log_file.write(f"CONFIG\t{config_file_path}\n")
+
+    log_file.write("#" + "="*79 + "\n")
+
+
+def results_format(gene_id, post_stats, stat='mean', decimals=2):
     '''
     Parameters
     ----------
@@ -339,17 +367,73 @@ def results_format(gene_id, post_stats, stat='mean', decimals=4):
         Formatted string containing the gene ID and fit values for each 
         parameter. 
     '''
-
+    params = ['mL', 'sL', 'tI', 'mT', 'sT', 'w', 'mL_a', 'sL_a', 'tI_a', 'w_a']
     fields = list([gene_id])
 
-    for pname, pvals in post_stats.items():
+    for p in params:
         
+        pvals = post_stats[p]
+
         pval = np.around(pvals[stat], decimals=decimals)
         pstd = np.around(pvals['stdev'], decimals=decimals)
 
-        pstring = f"{pname}={pval}:{pstd}"
+        pstring = f"{p}={pval}:{pstd}"
         fields.append(pstring)
 
     res = "\t".join(fields) + "\n"
-
     return res
+
+#    for pname, pvals in post_stats.items():
+        
+#        pval = np.around(pvals[stat], decimals=decimals)
+#        pstd = np.around(pvals['stdev'], decimals=decimals)
+
+#        pstring = f"{pname}={pval}:{pstd}"
+#        fields.append(pstring)
+
+#    res = "\t".join(fields) + "\n"
+
+#    return res
+
+
+def log_write(log_file, liet, fit):
+    '''
+    Logs meta information about fit for each region.
+    
+    Parameters
+    ----------
+    log_file : python file object
+        File to which logged info is written.
+
+    liet : class
+        LIET class object containing all the model info
+
+    fit : dict
+        Dictionary containing variation inference objects from pymc3
+
+
+    Returns
+    -------
+    Null
+    '''
+    id = liet.data['annot']['gene_id']
+    chrom = liet.data['annot']['chrom']
+    start = liet.data['annot']['start']
+    stop = leit.data['annot']['stop']
+    strand = liet.data['annot']['strand']
+    id_str = f">{id}:{chrom}:{start}:{stop}:{strand}\n"
+    
+    rng = (min(liet.data['coord']), max(liet.data['coord']))
+    rng_str =f"fit_range:{rng}\n" 
+
+    cov = (len(liet['pos_reads']), len(liet['neg_reads']))
+    cov_str = f"coverage(pos,neg):{cov}\n"
+
+    elbo = (min(fit['vi'].hist), max(fit['vi'].hist))
+    elbo_str = f"elbo_range:{elbo}\n"
+
+    # Write log strings
+    log_file.write(id_str)
+    log_file.write(rng_str)
+    log_file.write(cov_str)
+    log_file.write(elbo_str)
