@@ -318,7 +318,7 @@ def res_file_init(res_file, config_file_path):
     res_file.write("#" + "="*79 + "\n")
 
 
-def log_file_init(log_file, config_file_path)
+def log_file_init(log_file, config_file_path):
     '''
     Parameters
     ----------
@@ -419,21 +419,27 @@ def log_write(log_file, liet, fit):
     id = liet.data['annot']['gene_id']
     chrom = liet.data['annot']['chrom']
     start = liet.data['annot']['start']
-    stop = leit.data['annot']['stop']
+    stop = liet.data['annot']['stop']
     strand = liet.data['annot']['strand']
     id_str = f">{id}:{chrom}:{start}:{stop}:{strand}\n"
     
-    rng = (min(liet.data['coord']), max(liet.data['coord']))
-    rng_str =f"fit_range:{rng}\n" 
+    print(f"ID: {id_str}")
 
-    cov = (len(liet['pos_reads']), len(liet['neg_reads']))
-    cov_str = f"coverage(pos,neg):{cov}\n"
+    rng = (min(liet.data['coord']), max(liet.data['coord']))
+    rng_str =f"fit_range:{rng}\n"
+
+    cov = (len(liet.data['pos_reads']), -1*len(liet.data['neg_reads']))
+    cov_str = f"strand_cov:{cov}\n"
 
     elbo = (min(fit['vi'].hist), max(fit['vi'].hist))
     elbo_str = f"elbo_range:{elbo}\n"
+
+    num_iter = len(fit['vi'].hist)
+    iter_str = f"iterations:{num_iter}\n"
 
     # Write log strings
     log_file.write(id_str)
     log_file.write(rng_str)
     log_file.write(cov_str)
     log_file.write(elbo_str)
+    log_file.write(iter_str)
