@@ -26,24 +26,36 @@ def load_initiation_pdf(x, m, s, t):
 def elongation_pdf(x, m0, s0, t0, m1, s1):
 
     if m0 <= m1:
-        unscaled = (stats.exponnorm.cdf(x, t0/s0, m0, s0) 
-            * stats.norm.sf(x, m1, s1))
+        cdf = stats.exponnorm.cdf(x, t0/s0, m0, s0)
+        sf = stats.norm.sf(x, m1, s1)
+        unscaled = np.nan_to_num(cdf * sf)
+        #unscaled = (stats.exponnorm.cdf(x, t0/s0, m0, s0) 
+        #    * stats.norm.sf(x, m1, s1))
     else:
-        unscaled = (stats.exponnorm.cdf(invert(x, m0), t0/s0, m0, s0) 
-            * stats.norm.sf(invert(x, m1), m1, s1))
+        cdf = stats.exponnorm.cdf(invert(x, m0), t0/s0, m0, s0)
+        sf = stats.norm.sf(invert(x, m1), m1, s1)
+        unscaled = np.nan_to_num(cdf * sf)
+        #unscaled = (stats.exponnorm.cdf(invert(x, m0), t0/s0, m0, s0) 
+        #    * stats.norm.sf(invert(x, m1), m1, s1))
     
     xmin = int(min(m0 - 10*s0, m1 - 10*s1))
     xmax = int(max(m0 + 10*np.sqrt(s0**2 + t0**2), m1 + 10*s1))
     xfull = np.array(range(xmin, xmax))
     
     if m0 <= m1:
-        norm_factor = sum(stats.exponnorm.cdf(xfull, t0/s0, m0, s0) 
-            * stats.norm.sf(xfull, m1, s1))
+        cdf = stats.exponnorm.cdf(xfull, t0/s0, m0, s0)
+        sf = stats.norm.sf(xfull, m1, s1)
+        norm_factor = sum(np.nan_to_num(cdf * sf))
+        #norm_factor = sum(stats.exponnorm.cdf(xfull, t0/s0, m0, s0) 
+        #    * stats.norm.sf(xfull, m1, s1))
     else:
-        norm_factor = sum(stats.exponnorm.cdf(invert(xfull, m0), t0/s0, m0, s0) 
-            * stats.norm.sf(invert(xfull, m1), m1, s1))
+        cdf = stats.exponnorm.cdf(invert(xfull, m0), t0/s0, m0, s0)
+        sf = stats.norm.sf(invert(xfull, m1), m1, s1)
+        norm_factor = sum(np.nan_to_num(cdf * sf))
+        #norm_factor = sum(stats.exponnorm.cdf(invert(xfull, m0), t0/s0, m0, s0) 
+        #    * stats.norm.sf(invert(xfull, m1), m1, s1))
 
-    pdf = unscaled/norm_factor
+    pdf = np.nan_to_num(unscaled/norm_factor)
     return pdf
 
 
@@ -179,13 +191,21 @@ def gene_model(
             raise ValueError('Loading position parameter <mu0_n> must be '
                 'upstream of termination position <mu1_n>.')
 
+    # Recast weights
+    w_p = np.array(w_p)
+    w_n = np.array(w_n)
+
     # Check and unpack weights
-    if w_p != None:
+    if w_p.all() != None:
+        if len(w_p) == 2:
+            w_n = np.array([w_n[0], 0.0, 0.0, w_n[1]])
         if round(sum(w_p), 5) == 1.0:
             wLI_p, wE_p, wT_p, wB_p = w_p
         else:
             raise ValueError('Weights parameter <w_p> must sum to 1.0')
-    if w_n != None:
+    if w_n.all() != None:
+        if len(w_n) == 2:
+            w_n = np.array([w_n[0], 0.0, 0.0, w_n[1]])
         if round(sum(w_n), 5) == 1.0:
             wLI_n, wE_n, wT_n, wB_n = w_n
         else:
@@ -194,7 +214,7 @@ def gene_model(
     # Generate PDF(s)
     if pdf:
         # Positive strand pdf
-        if w_p != None:
+        if w_p.all() != None:
 
             pdf_p = np.zeros(len(xvals))
 
@@ -230,7 +250,7 @@ def gene_model(
             pdf_p = np.array([])
 
         # Negative strand pdf
-        if w_n != None:
+        if w_n.all() != None:
 
             pdf_n = np.zeros(len(xvals))
 
