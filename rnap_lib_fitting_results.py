@@ -310,10 +310,10 @@ def res_file_init(res_file, config_file_path):
     res_file.write(time_str)
 
     # Config
-    res_file.write(f"CONFIG\t{config_file_path}\n")
+    res_file.write(f"# CONFIG\t{config_file_path}\n")
 
     # Output format
-    res_file.write("# Output: param_name=value:stdev\n")
+    res_file.write("# Output format: param_name=value:stdev\n")
 
     res_file.write("#" + "="*79 + "\n")
 
@@ -340,7 +340,7 @@ def log_file_init(log_file, config_file_path):
     log_file.write(time_str)
 
     # Config
-    log_file.write(f"CONFIG\t{config_file_path}\n")
+    log_file.write(f"# CONFIG\t{config_file_path}\n")
 
     log_file.write("#" + "="*79 + "\n")
 
