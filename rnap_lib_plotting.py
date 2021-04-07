@@ -46,7 +46,7 @@ def convergence_plot(
 
     fig = plt.figure(figsize=fig_size)
 
-    if inference and tracker:
+    if inference != None and tracker != None:
 
         mu_ax = fig.add_subplot(221)
         std_ax = fig.add_subplot(222)
@@ -60,25 +60,27 @@ def convergence_plot(
         hist_ax.set_title('Negative ELBO tracker')
         hist_ax.set_xlabel('Iterations')
 
-        rmap = inference.approx.groups[0].bij.rmap
-        labels = rmap(np.array(range(len(tracker['mean'][0]))))
-        labels = [k for k, v in sorted(labels.items(), key=lambda x : x[1])]
-        labels = [e.split('_')[0] for e in labels]                          ## This doesn't quite work because of parameters with underscores, like 'w_a'
+#        rmap = inference.approx.groups[0].bij.rmap
+#        labels = rmap(np.array(range(len(tracker['mean'][0]))))
+#        print(f"labels: {labels}")
+#        labels = [k for k, v in sorted(labels.items(), key=lambda x : x[1])]
+#        print(f"labels 2: {labels}")
+#        labels = [e.split('_')[0] for e in labels]                          ## NEED TO FIX: This doesn't quite work because of parameters with underscores, like 'w_a'
 
-        std_ax.legend(
-            labels, 
-            loc='center left', 
-            bbox_to_anchor=(1.02, 0.5)
-        )
+#        std_ax.legend(
+#            labels, 
+#            loc='center left', 
+#            bbox_to_anchor=(1.02, 0.5)
+#        )
 
-    elif inference and not tracker:
+    elif inference != None and tracker == None:
         
         hist_ax = fig.add_subplot(111)
         hist_ax.plot(inference.hist)
         hist_ax.set_title('Negative ELBO')
         hist_ax.set_xlabel('Iterations')
 
-    elif not inference and tracker:
+    elif inference == None and tracker != None:
 
         mu_ax = fig.add_subplot(211)
         std_ax = fig.add_subplot(212)
@@ -110,6 +112,8 @@ def LIET_plot(
         antisense=True,
         shifted = True,
         fig_size=(10, 7),
+        xlim=None,
+        ylim=None,
         save=None,
         dpi=600):
     '''
@@ -167,6 +171,16 @@ def LIET_plot(
         Recommended that you set this function call equal to something, 
         otherwise it will display the figure twice.
     '''
+    # Scaling method for relative scaling of strands
+    try:
+        Np = len(liet_class.data['pos_reads'])
+        Nn = len(liet_class.data['neg_reads'])
+
+        frac_p = Np / (Np + Nn)
+        frac_n = Nn / (Np + Nn)
+    except:
+        frac_p = 1.0
+        frac_n = 1.0
 
     # Check that parameter stats exist.
     if liet_class.results['mL']:
@@ -258,14 +272,14 @@ def LIET_plot(
         # Plot pdfs of gene dependant on <sense> and <antisense>
         if strand == '+' or strand == 1:
             if sense:
-                ax.plot(xvals, pdf_p, color='C0')
+                ax.plot(xvals, pdf_p * frac_p, color='C0')
             if antisense:
-                ax.plot(xvals, -pdf_n, color='C3')
+                ax.plot(xvals, -pdf_n * frac_n, color='C3')
         else:
             if sense:
-                ax.plot(xvals, -pdf_n, color='C3')
+                ax.plot(xvals, -pdf_n * frac_n, color='C3')
             if antisense:
-                ax.plot(xvals, pdf_p, color='C0')
+                ax.plot(xvals, pdf_p * frac_n, color='C0')
 
         # Plotting the read data
         if data:
@@ -280,30 +294,36 @@ def LIET_plot(
             if sense:
                 if strand == '+' or strand == 1:
                     hist = np.histogram(data_p, bins=bins, density=True)
-                    height = +hist[0]
+                    height = +hist[0] * frac_p
                     col = 'C0'
                 else:
                     hist = np.histogram(data_n, bins=bins, density=True)
-                    height = -hist[0]
+                    height = -hist[0] * frac_n
                     col = 'C3'
 
                 loc = hist[1][:-1]
                 width = hist[1][1] - hist[1][0]
-                ax.bar(loc, height, width, alpha=0.3, align='edge', color=col)
+                ax.bar(loc, height, width, alpha=0.2, align='edge', color=col)
 
             if antisense:
                 if strand == '+' or strand == 1:
                     hist = np.histogram(data_n, bins=bins, density=True)
-                    height = -hist[0]
+                    height = -hist[0] * frac_n
                     col = 'C3'
                 else:
                     hist = np.histogram(data_p, bins=bins, density=True)
-                    height = +hist[0]
+                    height = +hist[0] * frac_p
                     col = 'C0'
 
                 loc = hist[1][:-1]
                 width = hist[1][1] - hist[1][0]
-                ax.bar(loc, height, width, alpha=0.3, align='edge', color=col)
+                ax.bar(loc, height, width, alpha=0.2, align='edge', color=col)
+
+        # Set plot limits
+        if isinstance(xlim, list) and len(xlim) == 2:
+            plt.xlim(xlim)
+        if isinstance(ylim, list) and len(ylim) == 2:
+            plt.ylim(ylim)
 
         # Add legend, labels, and reference line
         ax.axvline(
@@ -336,6 +356,6 @@ def LIET_plot(
         return 0
 
     if isinstance(save, str):
-        ax.savefig(save, bbox_inches='tight', dpi=dpi)
+        plt.savefig(save, bbox_inches='tight', dpi=dpi)
 
     return fig
