@@ -26,7 +26,7 @@ fr.res_file_init(res_file, config_file)
 
 log_filename = f"{res_filename}.log"                                     # Need to finalize this function
 log_file = open(log_filename, 'w')
-fr.log_file_init(log_file)
+fr.log_file_init(log_file, config_file)
 
 # Open bedgraph file
 bg_file = config['FILES']['BEDGRAPH']
@@ -43,17 +43,17 @@ with open(bg_file, 'r') as bg:
             
             # Compute padded range
             pad = config['DATA_PROC']['PAD']
+            print(f"PAD: {pad}")
             pad_args = [start, stop, strand, pad]
             adj_start, adj_stop = dp.pad_calc(*pad_args)
+
             # Extract reads
             bg_args = [bg, current_bgl, chromosome, adj_start, adj_stop]
-            print(f"BG_ARGS: {bg_args[1:]}")
             current_bgl, preads, nreads = dp.bgreads(*bg_args)
+
             # Convert read dict to list
             preads_list = np.array(dp.reads_d2l(preads))
             nreads_list = np.array(dp.reads_d2l(nreads))
-
-            print(f"Range: {adj_start}, {adj_stop}, {strand}")
 
             try:
                 # Generate model object
@@ -75,7 +75,7 @@ with open(bg_file, 'r') as bg:
                 # Load read data into LIET class object
                 coordinates = np.array(range(adj_start, adj_stop))
                 data = {
-                    'positions': coordinates, 
+                    'coord': coordinates, 
                     'pos_reads': preads_list, 
                     'neg_reads': nreads_list, 
                     'pad': pad, 
@@ -86,6 +86,7 @@ with open(bg_file, 'r') as bg:
                 print("Error loading data")
                 print("PAD: ", pad)
                 print(f"READS: {preads_list[0:10]}, {nreads_list[0:10]}")
+            print(f"PRIORS:\n {config['PRIORS']}")
             try:
                 # Load priors
                 if config['DATA_PROC']['RANGE_SHIFT']:
@@ -95,7 +96,6 @@ with open(bg_file, 'r') as bg:
                     tss = start
                     tcs = stop
                 priors = dp.prior_config(config['PRIORS'], tss, tcs)
-
                 liet.set_priors(**priors)
             except:
                 print("Error setting priors")
@@ -139,14 +139,16 @@ with open(bg_file, 'r') as bg:
                 res = fr.results_format(gene_id, post_stats, stat='mean')
                 res_file.write(res)
 
+                # Log meta info for fit
                 fr.log_write(log_file, liet, fit)
+
             except:
                 res_file.write(f"{gene_id}\t{start}\t{stop}\t{strand}\tERROR\n")
 #except:
 #    res_file.write("RUN ERROR")
 #    res_file.close()
 #    sys.exit(1)
-    
+
 res_file.close()
 log_file.close()
 sys.exit(0)
