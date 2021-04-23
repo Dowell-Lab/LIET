@@ -11,7 +11,7 @@ import pymc3 as pm
 import rnap_lib_data_sim as ds
 
 import theano.tensor as tt
-import theano
+#import theano
 #theano.config.exception_verbosity='high'
 #theano.config.compute_test_value='warn'
 
@@ -131,7 +131,8 @@ class LIET:
 
     def load_seq_data(
         self, 
-        positions=None, 
+        coord=None,
+#        positions=None, 
         pos_reads=None,
         neg_reads=None, 
         pad=0,
@@ -144,13 +145,13 @@ class LIET:
         if shift is True:
             # Orient reads to positive strand and shift gene start to bp = 0
             if strand == 1:
-                positions = np.array(positions) - start
+                coord = np.array(coord) - start
                 pos_reads = np.array(pos_reads) - start
                 neg_reads = (np.array(neg_reads) - start) * (-1)               # This section still needs to be evaluated for correctness.
                 neg_reads = np.flip(neg_reads, axis=0)
             elif strand == -1:
-                positions = (np.array(positions) - stop) * (-1)
-                positions = np.flip(positions, axis=0)
+                coord = (np.array(coord) - stop) * (-1)
+                coord = np.flip(coord, axis=0)
                 pos_reads = np.array(pos_reads) - stop
                 neg_reads = (np.array(neg_reads) - stop) * (-1)
                 neg_reads = np.flip(neg_reads, axis=0)
@@ -159,7 +160,7 @@ class LIET:
 
             self.data['shift'] = True
 
-        self.data['coord'] = positions
+        self.data['coord'] = coord
         self.data['pos_reads'] = pos_reads
         self.data['neg_reads'] = neg_reads
         self.data['pad'] = pad
@@ -459,7 +460,9 @@ class LIET:
                 )
 
                 # Normalize distribution in logscale
-                log_pdf = _log_unscaled - _log_norm_factor
+#                log_pdf = _log_unscaled - _log_norm_factor
+                                                                            # NOT SURE IF I NEED THIS BOUNDING
+                log_pdf = pm.distributions.dist_math.bound(_log_unscaled - _log_norm_factor, self._p['mL'] < self._p['mT'])
 
                 return log_pdf
                 #==============================================================
