@@ -525,7 +525,7 @@ def add_bg_dict(bglist, begin, end, reads_dict):
 #         return bglist, preads, nreads
 
 
-def bgreads(bg, current_bgl, chromosome, begin, end):
+def bgreads(bg, current_bg_list, chromosome, begin, end):
     '''
     Primary method for processing bedgraph lines and converting them to read
     lists appropriate for loading into LIET class instance. 
@@ -571,7 +571,7 @@ def bgreads(bg, current_bgl, chromosome, begin, end):
         add_bg_dict(current_bg_list, begin, end, reads) #Update w/ new reads
     # Downstream
     elif loc == -1:
-        return current_bg_list, preads, nreads
+        return current_bg_list, reads
     # Upstream
     else:
         pass
