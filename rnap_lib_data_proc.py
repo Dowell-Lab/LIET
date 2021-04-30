@@ -562,6 +562,7 @@ def bgreads(bg, current_bg_list, chromosome, begin, end):
         `Counter` style dict containing the read counts on one of the strands 
         between genomic coordinates <begin> and <end>
     '''
+    # Dict for reads on one of the strands
     reads = {}
     
     # Process current line
