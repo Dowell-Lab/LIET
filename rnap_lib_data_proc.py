@@ -324,41 +324,53 @@ def bgline_cast(bgline):
 
 
 def bg2d(bglist):
-    '''Convert bedgraph line <bglist> (len-4 list) to a read dict'''
-    start = int(bglist[1])
-    stop = int(bglist[2])
-    count = int(bglist[3])
+    '''Convert bedgraph list <bglist> (len-4 list) to a read dict'''
+    start = bglist[1]
+    stop = bglist[2]
+    count = abs(bglist[3])
     
-    if count >= 0:
-        preads = {i:count for i in range(start, stop)}
-        nreads = {}
-        return preads, nreads
+    if count > 0:
+        reads = {i:count for i in range(start, stop)}
+        return reads
     else:
-        preads = {}
-        nreads = {i:-count for i in range(start, stop)}
-        return preads, nreads
+        return {}
 
+# def bg2d(bglist): 
+#     '''Convert bedgraph line <bglist> (len-4 list) to a read dict'''
+#     start = int(bglist[1])
+#     stop = int(bglist[2])
+#     count = int(bglist[3])
     
-def bg2l(bglist):
-    '''Convert bedgraph line <bglist> (len-4 list) to a read list'''
-    start = int(bglist[1])
-    stop = int(bglist[2])
-    count = int(bglist[3])
-    
-    if count >= 0:
-        preads = []
-        nreads = []
-        for i in range(start, stop):
-            preads.extend([i]*count)
-        return preads, nreads
-    else:
-        preads = []
-        nreads = []
-        for i in range(start, stop):
-            nreads.extend([i]*-count)
-        return preads, nreads
+#     if count >= 0:
+#         preads = {i:count for i in range(start, stop)}
+#         nreads = {}
+#         return preads, nreads
+#     else:
+#         preads = {}
+#         nreads = {i:-count for i in range(start, stop)}
+#         return preads, nreads
 
+
+# def bg2l(bglist):
+#     '''Convert bedgraph line <bglist> (len-4 list) to a read list'''
+#     start = int(bglist[1])
+#     stop = int(bglist[2])
+#     count = int(bglist[3])
     
+#     if count > 0:
+#         preads = []
+#         nreads = []
+#         for i in range(start, stop):
+#             preads.extend([i]*count)
+#         return preads, nreads
+#     else:
+#         preads = []
+#         nreads = []
+#         for i in range(start, stop):
+#             nreads.extend([i]*-count)
+#         return preads, nreads
+
+
 def reads_d2l(readdict):
     '''Convert bedgraph read dict to read list'''
     readlist = []
@@ -397,30 +409,120 @@ def bglist_check(bglist, chromosome, begin, end):
         return 0
 
 
-def add_bgd(bglist, begin, end, preads, nreads):
+def add_bg_dict(bglist, begin, end, reads_dict):
     '''
-    Adds reads from <bglist> to read dictionaries <preads> and <nreads> for 
-    annotation ranging from <begin> to <end>.
-    '''
-    ch, i, f, ct = bglist
-    
-    p, n = bg2d([ch, max(i, begin), min(f, end), ct])
-    
-    preads.update(p)
-    nreads.update(n)
-
-
-def add_bgl(bglist, begin, end, preads, nreads):
-    '''
-    Adds reads from <bglist> to read lists <preads> and <nreads> for 
-    annotation ranging from <begin> to <end>.
+    Adds reads from <bglist> to correct read dictionary <preads> and <nreads> 
+    for annotation ranging from <begin> to <end>.
     '''
     ch, i, f, ct = bglist
     
-    p, n = bg2l([ch, max(i, begin), min(f, end), ct])
+    overlap_region = [ch, max(i, begin), min(f, end), ct]
+    reads = bg2d(overlap_region)
     
-    preads.extend(p)
-    nreads.extend(n)
+    if ct > 0:
+        reads_dict.update(reads)
+
+
+# def add_bg_dict(bglist, begin, end, preads, nreads):
+#     '''
+#     Adds reads from <bglist> to correct read dictionary <preads> and <nreads> 
+#     for annotation ranging from <begin> to <end>.
+#     '''
+#     ch, i, f, ct = bglist
+    
+#     reads = bg2d([ch, max(i, begin), min(f, end), ct])
+    
+#     if ct > 0:
+#         preads.update(reads)
+#     elif ct < 0:
+#         nreads.update(reads)
+
+
+# def add_bgl(bglist, begin, end, preads, nreads):
+#     '''
+#     Adds reads from <bglist> to read lists <preads> and <nreads> for 
+#     annotation ranging from <begin> to <end>.
+#     '''
+#     ch, i, f, ct = bglist
+    
+#     p, n = bg2l([ch, max(i, begin), min(f, end), ct])
+    
+#     preads.extend(p)
+#     nreads.extend(n)
+
+
+# def bgreads(bg, current_bgl, chromosome, begin, end):
+#     '''
+#     Primary method for processing bedgraph lines and converting them to read
+#     lists appropriate for loading into LIET class instance. 
+
+#     Parameters
+#     ----------
+#     bg : file object
+#         Bedgraph file object containing read count data. Must be in standard 
+#         four-column format (chr start stop count) and be sorted.
+    
+#     current_bgl : list
+#         List containing information from the most recent bedgraph line, prior 
+#         to calling this function. Elements must be cast to appropriate data 
+#         type. Format: [chr, start, stop, count]
+
+#     chromosome : string
+#         String specifying the chromosome of the annotation being evaluated. 
+#         Must be in standard format: 'chr#'
+    
+#     begin : int
+#         First genomic coordinate of the annotation being evaluated.
+
+#     end : int
+#         Last genomic coordinate of the annotation being evaluated.
+
+
+#     Returns
+#     -------
+#     bglist : list
+#         List containing information from most recent bedgraph line. The first 
+#         one downstream of annotation. Same format as <current_bgl>
+
+#     preads : dict
+#         Counter style dict containing the read counts on the positive strand 
+#         between genomic coordinates <begin> and <end>
+
+#     nreads : dict
+#         Counter style dict containing the read counts on the negative strand 
+#         between genomic coordinates <begin> and <end>
+#     '''
+#     preads = {}
+#     nreads = {}
+    
+#     # Process current line
+#     loc = bglist_check(current_bgl, chromosome, begin, end)
+#     # Overlapping
+#     if loc == 0:
+#         add_bg_dict(current_bgl, begin, end, preads, nreads)
+#     # Downstream
+#     elif loc == -1:
+#         return current_bgl, preads, nreads
+#     # Upstream
+#     else:
+#         pass
+    
+#     # Iterate through bedgraph until reaching first downstream line
+#     for bgline in bg:
+#         bglist = bgline_cast(bgline)
+#         loc = bglist_check(bglist, chromosome, begin, end)
+#         # Upstream
+#         if loc == 1:
+#             continue
+#         # Overlap
+#         elif loc == 0:
+#             add_bg_dict(bglist, begin, end, preads, nreads)
+#         # Downstream
+#         elif loc == -1:
+#             return bglist, preads, nreads
+#     # Return same thing if hits end of file
+#     else:
+#         return bglist, preads, nreads
 
 
 def bgreads(bg, current_bgl, chromosome, begin, end):
@@ -441,7 +543,7 @@ def bgreads(bg, current_bgl, chromosome, begin, end):
 
     chromosome : string
         String specifying the chromosome of the annotation being evaluated. 
-        Must be in standard format: 'chr#'
+        Must be in standard hg38 format: 'chr#'
     
     begin : int
         First genomic coordinate of the annotation being evaluated.
@@ -456,25 +558,20 @@ def bgreads(bg, current_bgl, chromosome, begin, end):
         List containing information from most recent bedgraph line. The first 
         one downstream of annotation. Same format as <current_bgl>
 
-    preads : dict
-        Counter style dict containing the read counts on the positive strand 
-        between genomic coordinates <begin> and <end>
-
-    nreads : dict
-        Counter style dict containing the read counts on the negative strand 
+    reads : dict
+        `Counter` style dict containing the read counts on one of the strands 
         between genomic coordinates <begin> and <end>
     '''
-    preads = {}
-    nreads = {}
+    reads = {}
     
     # Process current line
-    loc = bglist_check(current_bgl, chromosome, begin, end)
+    loc = bglist_check(current_bg_list, chromosome, begin, end)
     # Overlapping
     if loc == 0:
-        add_bgd(current_bgl, begin, end, preads, nreads)
+        add_bg_dict(current_bg_list, begin, end, reads) #Update w/ new reads
     # Downstream
     elif loc == -1:
-        return current_bgl, preads, nreads
+        return current_bg_list, preads, nreads
     # Upstream
     else:
         pass
@@ -488,13 +585,13 @@ def bgreads(bg, current_bgl, chromosome, begin, end):
             continue
         # Overlap
         elif loc == 0:
-            add_bgd(bglist, begin, end, preads, nreads)
+            add_bg_dict(bglist, begin, end, reads)  # Update w/ new reads
         # Downstream
         elif loc == -1:
-            return bglist, preads, nreads
+            return bglist, reads
     # Return same thing if hits end of file
     else:
-        return bglist, preads, nreads
+        return bglist, reads
 
 
 def pad_calc(start, stop, strand, pad):
