@@ -345,7 +345,7 @@ def log_file_init(log_file, config_file_path):
     log_file.write("#" + "="*79 + "\n")
 
 
-def results_format(gene_id, post_stats, stat='mean', decimals=2):
+def results_format(annot, post_stats, stat='mean', decimals=2):
     '''
     Parameters
     ----------
@@ -367,9 +367,14 @@ def results_format(gene_id, post_stats, stat='mean', decimals=2):
         Formatted string containing the gene ID and fit values for each 
         parameter. 
     '''
-    params = ['mL', 'sL', 'tI', 'mT', 'sT', 'w', 'mL_a', 'sL_a', 'tI_a', 'w_a']
-    fields = list([gene_id])
+    chrom = annot['chrom']
+    start = annot['start']
+    stop = annot['stop']
+    id = annot['gene_id']
+    fields = list([chrom, start, stop, id])
 
+    params = ['mL', 'sL', 'tI', 'mT', 'sT', 'w', 'mL_a', 'sL_a', 'tI_a', 'w_a']
+    fit = []
     for p in params:
         
         pvals = post_stats[p]
@@ -378,22 +383,13 @@ def results_format(gene_id, post_stats, stat='mean', decimals=2):
         pstd = np.around(pvals['stdev'], decimals=decimals)
 
         pstring = f"{p}={pval}:{pstd}"
-        fields.append(pstring)
+        fit.append(pstring)
+
+    fit = ",".join(fit)
+    fields.append(fit_param)
 
     res = "\t".join(fields) + "\n"
     return res
-
-#    for pname, pvals in post_stats.items():
-        
-#        pval = np.around(pvals[stat], decimals=decimals)
-#        pstd = np.around(pvals['stdev'], decimals=decimals)
-
-#        pstring = f"{pname}={pval}:{pstd}"
-#        fields.append(pstring)
-
-#    res = "\t".join(fields) + "\n"
-
-#    return res
 
 
 def log_write(log_file, liet, fit):
