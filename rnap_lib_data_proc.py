@@ -31,6 +31,7 @@ def annot_loader(annot_file):
         'chr18', 'chr19', 'chr20', 'chr21', 'chr22', 'chr23', 'chrX', 'chrY'
     ]
     annot = {ch:{} for ch in chromosomes}
+    pad = {}
     strand_dict = {'+': 1, '-': -1}
 
     # Open annotation file (tab delimited: chr, start, stop, strand, id)
@@ -39,7 +40,7 @@ def annot_loader(annot_file):
         for i, line in enumerate(f):
             line = line.strip().split('\t')
 
-            if len(line) != 5:
+            if len(line) != 6:
                 raise ValueError(f"Annotation at line {i} is incorrectly "
                     f"formatted. See: '{line}'")
 
@@ -50,6 +51,12 @@ def annot_loader(annot_file):
                 strnd = strand_dict[line[3]]
                 id = str(line[4])
                 annot[chrom][(start, stop, strnd)] = id
+
+                pad_vals = line[5].strip().split(',')
+                pad5 = int(pad_vals[0])
+                pad3 = int(pad_vals[1])
+                pad[id] = (pad5, pad3)
+
             except:
                 raise ValueError(f"Annotation at line {i} is incorrectly "
                     f"formatted. See: '{line}'")
@@ -62,7 +69,7 @@ def annot_loader(annot_file):
         else:
             continue
 
-    return annot_sorted
+    return annot_sorted, pad
 
 
 
@@ -144,7 +151,8 @@ def config_loader(config_file):
                 config[category][pname] = pval_dict
             # FILES
             elif (pname == 'ANNOTATION' or 
-                pname == 'BEDGRAPH' or
+                pname == 'BEDGRAPH_POS' or
+                pname == 'BEDGRAPH_NEG' or
                 pname == 'RESULTS'):
                 config[category][pname] = pval
             # MODEL
