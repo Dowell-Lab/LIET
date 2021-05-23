@@ -171,6 +171,7 @@ def LIET_plot(
         Recommended that you set this function call equal to something, 
         otherwise it will display the figure twice.
     '''
+
     # Scaling method for relative scaling of strands
     try:
         Np = len(liet_class.data['pos_reads'])
@@ -186,7 +187,13 @@ def LIET_plot(
     if liet_class.results['mL']:
         
         strand = liet_class.data['annot']['strand']
-        xvals = liet_class.data['coord']
+        if strand == '+' or strand == 1:
+            xvals = liet_class.data['coord']
+        else:
+            xvals = np.flip(-1 * liet_class.data['coord'])
+#        print(f"PLOTTING: annot --- {liet_class.data['annot']['start']},{liet_class.data['annot']['stop']}")
+#        print(f"PLOTTING: xvals --- {xvals[0]},{xvals[-1]}")
+#        xvals = np.array(range(-max(abs(xvals)), max(abs(xvals))))
         results = liet_class.results
 
         if sense:
@@ -207,8 +214,13 @@ def LIET_plot(
             sL_a = results['sL_a'][stat]
             tI_a = results['tI_a'][stat]
             w_a = results['w_a'][stat]
-            if len(w_a) == 3:
-                w_a.extend([0])
+            # Have to do this so that the weights arrays are length 4
+            if len(w_a) == 1:
+                w_a.extend([0, 0, 0])
+            elif len(w_a) == 2:
+                w_a = [w_a[0], 0, 0, w_a[1]]
+#            if len(w_a) == 3:
+#                w_a.extend([0])
         else:
             mL_a, sL_a, tI_a, w_a = None, None, None, None
 
@@ -284,12 +296,23 @@ def LIET_plot(
         # Plotting the read data
         if data:
 
+            # TESTING BINS
+#            bins = np.linspace(xvals[0], xvals[-1], 1000)
+
             data_p = liet_class.data['pos_reads']
             data_n = liet_class.data['neg_reads']
+
             # Horizontal inversion if data was initially shifted
             if shifted:
                 data_n = ds.invert(data_n, 0)
-            
+
+            bmin = min(min(data_p), min(data_n))
+            bmax = max(max(data_p), max(data_n))
+            bins = np.linspace(bmin, bmax, 1000)
+            print(f"PLOTTING: data_p range ---- {min(data_p)},{max(data_p)}")
+            print(f"PLOTTING: data_n range ---- {min(data_n)},{max(data_n)}")
+            print(f"PLOTTING: bins --- {bins[0]},{bins[-1]}")
+
             # Make negative histogram for neg strand data, depending on annot
             if sense:
                 if strand == '+' or strand == 1:
