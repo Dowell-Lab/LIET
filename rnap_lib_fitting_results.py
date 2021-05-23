@@ -349,7 +349,8 @@ def results_format(annot, post_stats, stat='mean', decimals=2):
     '''
     Parameters
     ----------
-    gene_id : str
+    NOTE: MUST UPDATE DOCSTRING
+    annot : str
         Gene ID for which the fit results are being recorded
 
     post_stats : dict
@@ -367,14 +368,15 @@ def results_format(annot, post_stats, stat='mean', decimals=2):
         Formatted string containing the gene ID and fit values for each 
         parameter. 
     '''
-    chrom = annot['chrom']
-    start = annot['start']
-    stop = annot['stop']
-    id = annot['gene_id']
-    fields = list([chrom, start, stop, id])
+    chrom = str(annot['chrom'])
+    start = str(annot['start'])
+    stop = str(annot['stop'])
+    strand = str(annot['strand'])
+    id = str(annot['gene_id'])
+    fields = list([chrom, start, stop, strand, id])
 
     params = ['mL', 'sL', 'tI', 'mT', 'sT', 'w', 'mL_a', 'sL_a', 'tI_a', 'w_a']
-    fit = []
+    fit_res = []
     for p in params:
         
         pvals = post_stats[p]
@@ -383,10 +385,10 @@ def results_format(annot, post_stats, stat='mean', decimals=2):
         pstd = np.around(pvals['stdev'], decimals=decimals)
 
         pstring = f"{p}={pval}:{pstd}"
-        fit.append(pstring)
+        fit_res.append(pstring)
 
-    fit = ",".join(fit)
-    fields.append(fit_param)
+    fit_res = ",".join(fit_res)
+    fields.append(fit_res)
 
     res = "\t".join(fields) + "\n"
     return res
