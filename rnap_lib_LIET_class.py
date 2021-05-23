@@ -143,7 +143,7 @@ class LIET:
         strand = self.data['annot']['strand']
 
         if shift is True:
-            # Orient reads to positive strand and shift gene start to bp = 0
+            # Orient reads to positive strand and shift gene TSS to bp = 0
             if strand == 1:
                 coord = np.array(coord) - start
                 pos_reads = np.array(pos_reads) - start
