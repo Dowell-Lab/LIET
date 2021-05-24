@@ -191,9 +191,7 @@ def LIET_plot(
             xvals = liet_class.data['coord']
         else:
             xvals = np.flip(-1 * liet_class.data['coord'])
-#        print(f"PLOTTING: annot --- {liet_class.data['annot']['start']},{liet_class.data['annot']['stop']}")
-#        print(f"PLOTTING: xvals --- {xvals[0]},{xvals[-1]}")
-#        xvals = np.array(range(-max(abs(xvals)), max(abs(xvals))))
+
         results = liet_class.results
 
         if sense:
@@ -309,9 +307,6 @@ def LIET_plot(
             bmin = min(min(data_p), min(data_n))
             bmax = max(max(data_p), max(data_n))
             bins = np.linspace(bmin, bmax, 1000)
-            print(f"PLOTTING: data_p range ---- {min(data_p)},{max(data_p)}")
-            print(f"PLOTTING: data_n range ---- {min(data_n)},{max(data_n)}")
-            print(f"PLOTTING: bins --- {bins[0]},{bins[-1]}")
 
             # Make negative histogram for neg strand data, depending on annot
             if sense:
