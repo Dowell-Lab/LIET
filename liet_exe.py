@@ -200,7 +200,7 @@ with open(bgp_file, 'r') as bgp, open(bgn_file, 'r') as bgn:
                     data=True,
                     antisense=True,
                     sense=True,
-                    save=f"C:\\Users\\Jacob\\Desktop\\LIET_temp\\liet_plot_{gene_id}.pdf"
+                    save=f"liet_plot_{gene_id}.pdf"
                 )
 
             except:
