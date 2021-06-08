@@ -441,3 +441,47 @@ def log_write(log_file, liet, fit):
     log_file.write(cov_str)
     log_file.write(elbo_str)
     log_file.write(iter_str)
+
+
+def log_format(liet, fit):
+    '''
+    Logs meta information about fit for each region.
+    
+    Parameters
+    ----------
+    log_file : python file object
+        File to which logged info is written.
+
+    liet : class
+        LIET class object containing all the model info
+
+    fit : dict
+        Dictionary containing variation inference objects from pymc3
+
+
+    Returns
+    -------
+    Null
+    '''
+    id = liet.data['annot']['gene_id']
+    chrom = liet.data['annot']['chrom']
+    start = liet.data['annot']['start']
+    stop = liet.data['annot']['stop']
+    strand = liet.data['annot']['strand']
+    id_str = f">{id}:{chrom}:{start}:{stop}:{strand}\n"
+    
+    print(f"ID: {id_str}")
+
+    rng = (min(liet.data['coord']), max(liet.data['coord']))
+    rng_str =f"fit_range:{rng}\n"
+
+    cov = (len(liet.data['pos_reads']), -1*len(liet.data['neg_reads']))
+    cov_str = f"strand_cov:{cov}\n"
+
+    elbo = (min(fit['vi'].hist), max(fit['vi'].hist))
+    elbo_str = f"elbo_range:{elbo}\n"
+
+    num_iter = len(fit['vi'].hist)
+    iter_str = f"iterations:{num_iter}\n"
+
+    return id_str, rng_str, cov_str, elbo_str, iter_str
