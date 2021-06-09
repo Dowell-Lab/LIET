@@ -37,9 +37,10 @@ bgp_file = config['FILES']['BEDGRAPH_POS']
 bgn_file = config['FILES']['BEDGRAPH_NEG']
 reads_dict = dp.bedgraph_loader(bgp_file, bgn_file, annot_dict, pad_dict)
 
+print(f"RD: {reads_dict.keys()}")
 # Combine annot_dict and reads_dict for parallelization input
 mpargs = {
-    (ch, a, gid) : reads_dict[id] 
+    (ch, a, gid) : reads_dict[gid] 
     for ch, annots in annot_dict.items() 
     for a, gid in annots.items()
 }
@@ -183,7 +184,8 @@ def fit_routine(fit_instance, config, pad_dict):
 
 # Run fitting in parallel
 pool = mp.Pool(mp.cpu_count())
-res = pool.starmap_async(fit_routine, [(i, config, pad_dict) for i in mpargs])
+res = pool.apply_async(fit_routine, [(i, config, pad_dict) for i in mpargs])
+res = res.get()
 pool.close()
 
 # Convert `res` tuple into a dictionary
@@ -210,4 +212,5 @@ for annot, fitres in res_dict.items():
 
 res_file.close()
 log_file.close()
+
 sys.exit(0)
