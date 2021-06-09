@@ -184,7 +184,7 @@ def fit_routine(fit_instance, config, pad_dict):
 
 # Run fitting in parallel
 pool = mp.Pool(mp.cpu_count())
-res = pool.apply_async(fit_routine, [(i, config, pad_dict) for i in mpargs])
+res = pool.starmap_async(fit_routine, [(i, config, pad_dict) for i in mpargs])
 res = res.get()
 pool.close()
 
