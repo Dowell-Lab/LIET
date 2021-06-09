@@ -1,0 +1,53 @@
+[FILES]
+ANNOTATION=C:\Users\Jacob\Dropbox\0DOWELL\rnap_model\LIET\test_annot2.txt
+BEDGRAPH_POS=C:\Users\Jacob\Dropbox\0DOWELL\rnap_model\LIET\test_bg_pos.txt
+BEDGRAPH_NEG=C:\Users\Jacob\Dropbox\0DOWELL\rnap_model\LIET\test_bg_neg.txt
+RESULTS=C:\Users\Jacob\Dropbox\0DOWELL\rnap_model\LIET\test_results2.liet
+
+[MODEL]
+ANTISENSE=True
+BACKGROUND=True
+FRACPRIORS=False
+
+[PRIORS]
+# dist:constant,value:
+# dist:uniform,lower:,upper:
+# dist:exponential,tau:,offset:
+# dist:normal,mu:,sigma:
+# dist:gamma,mu:,sigma:,offset:
+# dist:wald,mu:,lambda:,alpha:
+
+mL=dist:
+sL=dist:
+tI=,dist:
+mT=dist:
+sT=dist:
+w=dist:dirichlet,alpha_LI:1,alpha_E:1,alpha_T:1,alpha_B:1
+mL_a=dist:
+sL_a=dist:
+tI_a=dist:
+
+[DATA_PROC]
+RANGE_SHIFT=True
+PAD=1000,1000
+
+[FIT]
+ITERATIONS=5000
+LEARNING_RATE=0.05
+METHOD=advi
+OPTIMIZER=adamax
+MEANFIELD=True
+TOLERANCE=1e-5
+
+[RESULTS]
+SAMPLES=50000
+MEAN=True
+MODE=False
+MEDIAN=False
+STDEV=True
+SKEW=False
+
+
+
+#mL=dist:uniform,mu:9,sigma:100
+#mT=dist:exponential,lambda:0.002,offset:9
