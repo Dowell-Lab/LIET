@@ -71,14 +71,14 @@ def fit_routine(fit_instance, config, pad_dict):
         liet = LIET()
 
         # Load annotation into LIET class object
-        annot = {
+        annot_dict = {
             'gene_id': gene_id, 
             'chrom': chrom, 
             'start': start, 
             'stop': stop, 
             'strand': strand
         }
-        liet.load_annotation(**annot)
+        liet.load_annotation(**annot_dict)
     except:
         return {annot: return_dict}
 
@@ -185,6 +185,7 @@ def fit_routine(fit_instance, config, pad_dict):
 # Run fitting in parallel
 pool = mp.Pool(mp.cpu_count())
 res = pool.starmap_async(fit_routine, [(i, config, pad_dict) for i in mpargs.items()])
+print(f"res: {res}")
 res = res.get()
 pool.close()
 

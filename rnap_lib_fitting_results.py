@@ -479,11 +479,15 @@ def log_format(liet, fit):
     cov_str = f"strand_cov:{cov}\n"
 
     print(f"cov: {cov_str}")
-    
+
     elbo = (min(fit['vi'].hist), max(fit['vi'].hist))
     elbo_str = f"elbo_range:{elbo}\n"
+
+    print(f"elbo: {elbo_str}")
 
     num_iter = len(fit['vi'].hist)
     iter_str = f"iterations:{num_iter}\n"
 
+    print(f"iters: {iter_str}")
+    
     return id_str, rng_str, cov_str, elbo_str, iter_str
