@@ -188,19 +188,24 @@ res = pool.starmap_async(fit_routine, [(i, config, pad_dict) for i in mpargs.ite
 res = res.get()
 pool.close()
 
+print("Fitting complete...")
+
 # Convert `res` tuple into a dictionary
 res_dict = {}
 for i in res:
+    print(f"ref: {i}")
     res_dict.update(i)
 
 # Open results and log files and initialize them
 res_filename = config['FILES']['RESULTS']
 res_file = open(res_filename, 'w')
-fr.res_file_init(res_file, config_file) 
+fr.res_file_init(res_file, config_file)
+print(f"res file: {res_filename}")
 
 log_filename = f"{res_filename}.log"                                     # Need to finalize this function
 log_file = open(log_filename, 'w')
 fr.log_file_init(log_file, config_file)
+print(f"log file: {log_filename}")
 
 # Record results and log information
 for annot, fitres in res_dict.items():

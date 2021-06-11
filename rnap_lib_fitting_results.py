@@ -478,6 +478,8 @@ def log_format(liet, fit):
     cov = (len(liet.data['pos_reads']), -1*len(liet.data['neg_reads']))
     cov_str = f"strand_cov:{cov}\n"
 
+    print(f"cov: {cov_str}")
+    
     elbo = (min(fit['vi'].hist), max(fit['vi'].hist))
     elbo_str = f"elbo_range:{elbo}\n"
 
