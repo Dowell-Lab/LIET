@@ -176,7 +176,7 @@ def fit_routine(fit_instance, config, pad_dict):
             sense=True,
             save=f"liet_plot_{gene_id}.pdf"
         )
-
+        lplot.close()
     except:
         print(f"Can't plot fit result for {gene_id}")
 
