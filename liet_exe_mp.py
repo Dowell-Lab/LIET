@@ -211,11 +211,14 @@ print(f"log file: {log_filename}")
 # Record results and log information
 for annot, fitres in res_dict.items():
     res_str = fitres['res']
+    print(f"RES LINE: {res_str}\n")
     log_str = fitres['log']
+    print(f"LOG LINE: {res_str}\n")
     res_file.write(res_str)
     for line in log_str:
         log_file.write(line)
 
+print("ALL DONE")
 res_file.close()
 log_file.close()
 
