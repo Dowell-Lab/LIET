@@ -66,6 +66,8 @@ def fit_routine(fit_instance, config, pad_dict):
     preads_list = np.array(dp.reads_d2l(reads[0]))
     nreads_list = np.array(dp.reads_d2l(reads[1]))
 
+    print(gene_id)
+
     try:
         # Generate model object
         liet = LIET()
@@ -184,7 +186,7 @@ def fit_routine(fit_instance, config, pad_dict):
 
 # Run fitting in parallel
 pool = mp.Pool(mp.cpu_count())
-res = pool.starmap_async(fit_routine, [(i, config, pad_dict) for i in mpargs.items()])
+res = pool.starmap(fit_routine, [(i, config, pad_dict) for i in mpargs.items()])
 print(f"res: {res}")
 res = res.get()
 pool.close()
