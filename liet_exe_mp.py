@@ -188,7 +188,7 @@ def fit_routine(fit_instance, config, pad_dict):
 pool = mp.Pool(mp.cpu_count())
 res = pool.starmap(fit_routine, [(i, config, pad_dict) for i in mpargs.items()])
 print(f"res: {res}")
-res = res.get()
+#res = res.get()
 pool.close()
 
 print("Fitting complete...")
@@ -216,10 +216,16 @@ for annot, fitres in res_dict.items():
     print(f"RES LINE: {res_str}\n")
     log_str = fitres['log']
     print(f"LOG LINE: {res_str}\n")
-    res_file.write(res_str)
-    for line in log_str:
-        log_file.write(line)
-
+    try:
+        res_file.write(res_str)
+    except:
+        print(f"Can't write res: {annot}")
+    try:
+        for line in log_str:
+            log_file.write(line)
+    except:
+        print(f"Can't write log: {annot}")
+        
 print("ALL DONE")
 res_file.close()
 log_file.close()
