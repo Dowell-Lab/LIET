@@ -50,8 +50,6 @@ def fit_routine(fit_instance, config, pad_dict):
     
     start_time = time.time()
 
-    return_dict = {'res': None, 'log': None}
-
     annot, reads = fit_instance
 
     chrom = annot[0]
@@ -62,11 +60,14 @@ def fit_routine(fit_instance, config, pad_dict):
     pad_args = [start, stop, strand, pad]
     adj_start, adj_stop = dp.pad_calc(*pad_args)
 
+#    return_dict = {'res': f"{gene_id}\tERROR", 'log': f">{gene_id}:ERROR"}
+    return_dict = {'res': f"{gene_id}\n", 'log': (f">{gene_id}\n", )}
+
     # Convert read dict to list
     preads_list = np.array(dp.reads_d2l(reads[0]))
     nreads_list = np.array(dp.reads_d2l(reads[1]))
 
-    print(gene_id)
+    print(f"RUNNING: {gene_id}")
 
     try:
         # Generate model object
@@ -82,6 +83,7 @@ def fit_routine(fit_instance, config, pad_dict):
         }
         liet.load_annotation(**annot_dict)
     except:
+        return_dict['res'] = f"{annot_dict['gene_id']}: annot load error\n"
         return {annot: return_dict}
 
     try:
@@ -96,6 +98,7 @@ def fit_routine(fit_instance, config, pad_dict):
         }
         liet.load_seq_data(**data)
     except:
+        return_dict['res'] = f"{annot_dict['gene_id']}: seq data load error\n"
         return {annot: return_dict}
 
     try:
@@ -109,6 +112,7 @@ def fit_routine(fit_instance, config, pad_dict):
         priors = dp.prior_config(config['PRIORS'], tss, tcs)
         liet.set_priors(**priors)
     except:
+        return_dict['res'] = f"{annot_dict['gene_id']}: prior set error\n"
         return {annot: return_dict}
 
     try:
@@ -117,7 +121,11 @@ def fit_routine(fit_instance, config, pad_dict):
             antisense=config['MODEL']['ANTISENSE'],
             background=config['MODEL']['BACKGROUND']
         )
+    except:
+        return_dict['res'] = f"{annot_dict['gene_id']}: model build error\n"
+        return {annot: return_dict}
 
+    try:
         # Fit
         fit = fr.vi_fit(
             liet.model,
@@ -129,6 +137,9 @@ def fit_routine(fit_instance, config, pad_dict):
             tolerance=config['FIT']['TOLERANCE'],                       # NEED TO FIX IMPLEMENTATION
             param_tracker=False,                                        # NEEDS IMPLEMENTATION
         )
+    except:
+        return_dict['res'] = f"{annot_dict['gene_id']}: fitting error\n"
+        return {annot: return_dict}
 
     ## Currently omitting these steps =============================
     # Evaluate "best fit" values
@@ -137,6 +148,7 @@ def fit_routine(fit_instance, config, pad_dict):
     ## ============================================================
     #                print("Summarizing post...")
         # Summarize posteriors
+    try:
         post_stats = fr.posterior_stats(
             fit['approx'],
             N=config['RESULTS']['SAMPLES'],
@@ -146,14 +158,23 @@ def fit_routine(fit_instance, config, pad_dict):
             calc_stdev=config['RESULTS']['STDEV'],
             calc_skew=config['RESULTS']['SKEW']
         )
+    except:
+        return_dict['res'] = f"{annot_dict['gene_id']}: post stat error\n"
+        return {annot: return_dict}
 
+    try:
         # Record results of fitting
         res_string = fr.results_format(
             liet.data['annot'], 
             post_stats, 
             stat='mean'
         )
+        return_dict['res'] = res_string
+    except:
+        return_dict['res'] = f"{annot_dict['gene_id']}: res str error\n"
+        return {annot: return_dict}
 
+    try:
         # Log meta info for fit
         log_strings = fr.log_format(liet, fit)
 
@@ -163,9 +184,9 @@ def fit_routine(fit_instance, config, pad_dict):
         
         log_strings = (*log_strings, time_string)
 
-        return_dict['res'] = res_string
         return_dict['log'] = log_strings
     except:
+        return_dict['res'] = f"{annot_dict['gene_id']}: log str error\n"
         return {annot: return_dict}
 
     # Plot fit result
@@ -187,7 +208,7 @@ def fit_routine(fit_instance, config, pad_dict):
 # Run fitting in parallel
 pool = mp.Pool(mp.cpu_count())
 res = pool.starmap(fit_routine, [(i, config, pad_dict) for i in mpargs.items()])
-print(f"res: {res}")
+print(f"LENGTH res: {len(res)}")
 #res = res.get()
 pool.close()
 
@@ -196,7 +217,7 @@ print("Fitting complete...")
 # Convert `res` tuple into a dictionary
 res_dict = {}
 for i in res:
-    print(f"ref: {i}")
+#    print(f"ref: {i}")
     res_dict.update(i)
 
 # Open results and log files and initialize them
@@ -225,7 +246,7 @@ for annot, fitres in res_dict.items():
             log_file.write(line)
     except:
         print(f"Can't write log: {annot}")
-        
+
 print("ALL DONE")
 res_file.close()
 log_file.close()
