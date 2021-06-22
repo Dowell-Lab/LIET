@@ -206,17 +206,18 @@ def fit_routine(fit_instance, config, pad_dict):
     return {annot: return_dict}
 
 # Run fitting in parallel
-#pool = mp.Pool(mp.cpu_count())
 print(f"CPU: {mp.cpu_count()}")
-#res = pool.starmap(fit_routine, [(i, config, pad_dict) for i in mpargs.items()])
+
+pool = mp.Pool(mp.cpu_count())
+res = pool.starmap(fit_routine, [(i, config, pad_dict) for i in mpargs.items()])
+pool.close()
+
+#with mp.Pool(processes=mp.cpu_count()) as pool:
+#    res = list(pool.apply(fit_routine, args=[i, config, pad_dict]) for i in mpargs.items())
+#res = res.get()
 #print(f"LENGTH res: {len(res)}")
 
-with mp.Pool(processes=mp.cpu_count()) as pool:
-    res = list(pool.apply(fit_routine, args=[i, config, pad_dict]) for i in mpargs.items())
-#res = res.get()
-#pool.close()
-
-print("Fitting complete...")
+print("Fitting complete")
 
 # Convert `res` tuple into a dictionary
 res_dict = {}
