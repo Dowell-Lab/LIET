@@ -206,11 +206,15 @@ def fit_routine(fit_instance, config, pad_dict):
     return {annot: return_dict}
 
 # Run fitting in parallel
-pool = mp.Pool(mp.cpu_count())
-res = pool.starmap(fit_routine, [(i, config, pad_dict) for i in mpargs.items()])
-print(f"LENGTH res: {len(res)}")
+#pool = mp.Pool(mp.cpu_count())
+print(f"CPU: {mp.cpu_count()}")
+#res = pool.starmap(fit_routine, [(i, config, pad_dict) for i in mpargs.items()])
+#print(f"LENGTH res: {len(res)}")
+
+with mp.Pool(processes=mp.cpu_count()) as pool:
+    res = list(pool.apply(fit_routine, args=[i, config, pad_dict]) for i in mpargs.items())
 #res = res.get()
-pool.close()
+#pool.close()
 
 print("Fitting complete...")
 
