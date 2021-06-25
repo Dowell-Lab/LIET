@@ -265,7 +265,7 @@ for annot, fitres in res_dict.items():
     res_str = fitres['res']
     print(f"RES LINE: {res_str}\n")
     log_str = fitres['log']
-    print(f"LOG LINE: {res_str}\n")
+    print(f"LOG LINE: {log_str}\n")
     try:
         res_file.write(res_str)
     except:
