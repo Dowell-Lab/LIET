@@ -46,11 +46,6 @@ mpargs = {
     for a, gid in annots.items()
 }
 
-# Open err function
-res_filename = config['FILES']['RESULTS']
-err_filename = res_filename + ".err"
-err_file = open(err_filename, 'w')
-
 # Parallelizable function that performs all the fitting
 def fit_routine(fit_instance, config, pad_dict):
     
@@ -67,7 +62,11 @@ def fit_routine(fit_instance, config, pad_dict):
     adj_start, adj_stop = dp.pad_calc(*pad_args)
 
 #    return_dict = {'res': f"{gene_id}\tERROR", 'log': f">{gene_id}:ERROR"}
-    return_dict = {'res': f"{gene_id}\n", 'log': (f">{gene_id}\n", )}
+    return_dict = {
+        'res': f"{gene_id}\n", 
+        'log': (f">{gene_id}\n", ), 
+        'err': [f">{gene_id}\n"]
+    }
 
     # Convert read dict to list
     preads_list = np.array(dp.reads_d2l(reads[0]))
@@ -90,8 +89,7 @@ def fit_routine(fit_instance, config, pad_dict):
         liet.load_annotation(**annot_dict)
     except:
         return_dict['res'] = f"{annot_dict['gene_id']}: annot load error\n"
-        err_file.write(f">{annot_dict['gene_id']}\n")
-        err_file.write(f"{traceback.format_exc()}\n")
+        return_dict['err'].append(f"{traceback.format_exc()}\n")
         return {annot: return_dict}
 
     try:
@@ -107,8 +105,7 @@ def fit_routine(fit_instance, config, pad_dict):
         liet.load_seq_data(**data)
     except:
         return_dict['res'] = f"{annot_dict['gene_id']}: seq data load error\n"
-        err_file.write(f">{annot_dict['gene_id']}\n")
-        err_file.write(f"{traceback.format_exc()}\n")
+        return_dict['err'].append(f"{traceback.format_exc()}\n")
         return {annot: return_dict}
 
     try:
@@ -123,8 +120,7 @@ def fit_routine(fit_instance, config, pad_dict):
         liet.set_priors(**priors)
     except:
         return_dict['res'] = f"{annot_dict['gene_id']}: prior set error\n"
-        err_file.write(f">{annot_dict['gene_id']}\n")
-        err_file.write(f"{traceback.format_exc()}\n")
+        return_dict['err'].append(f"{traceback.format_exc()}\n")
         return {annot: return_dict}
 
     try:
@@ -135,8 +131,7 @@ def fit_routine(fit_instance, config, pad_dict):
         )
     except:
         return_dict['res'] = f"{annot_dict['gene_id']}: model build error\n"
-        err_file.write(f">{annot_dict['gene_id']}\n")
-        err_file.write(f"{traceback.format_exc()}\n")
+        return_dict['err'].append(f"{traceback.format_exc()}\n")
         return {annot: return_dict}
 
     try:
@@ -153,8 +148,7 @@ def fit_routine(fit_instance, config, pad_dict):
         )
     except:
         return_dict['res'] = f"{annot_dict['gene_id']}: fitting error\n"
-        err_file.write(f">{annot_dict['gene_id']}\n")
-        err_file.write(f"{traceback.format_exc()}\n")
+        return_dict['err'].append(f"{traceback.format_exc()}\n")
         return {annot: return_dict}
 
     ## Currently omitting these steps =============================
@@ -176,8 +170,7 @@ def fit_routine(fit_instance, config, pad_dict):
         )
     except:
         return_dict['res'] = f"{annot_dict['gene_id']}: post stat error\n"
-        err_file.write(f">{annot_dict['gene_id']}\n")
-        err_file.write(f"{traceback.format_exc()}\n")
+        return_dict['err'].append(f"{traceback.format_exc()}\n")
         return {annot: return_dict}
 
     try:
@@ -190,8 +183,7 @@ def fit_routine(fit_instance, config, pad_dict):
         return_dict['res'] = res_string
     except:
         return_dict['res'] = f"{annot_dict['gene_id']}: res str error\n"
-        err_file.write(f">{annot_dict['gene_id']}\n")
-        err_file.write(f"{traceback.format_exc()}\n")
+        return_dict['err'].append(f"{traceback.format_exc()}\n")
         return {annot: return_dict}
 
     try:
@@ -207,8 +199,7 @@ def fit_routine(fit_instance, config, pad_dict):
         return_dict['log'] = log_strings
     except:
         return_dict['res'] = f"{annot_dict['gene_id']}: log str error\n"
-        err_file.write(f">{annot_dict['gene_id']}\n")
-        err_file.write(f"{traceback.format_exc()}\n")
+        return_dict['err'].append(f"{traceback.format_exc()}\n")
         return {annot: return_dict}
 
     # Plot fit result
@@ -224,8 +215,7 @@ def fit_routine(fit_instance, config, pad_dict):
         lplot.close()
     except:
         print(f"Can't plot fit result for {gene_id}")
-        err_file.write(f">{annot_dict['gene_id']}\n")
-        err_file.write(f"{traceback.format_exc()}\n")
+        return_dict['err'].append(f"{traceback.format_exc()}\n")
 
     return {annot: return_dict}
 
@@ -249,6 +239,11 @@ for i in res:
 #    print(f"ref: {i}")
     res_dict.update(i)
 
+# Open err function
+res_filename = config['FILES']['RESULTS']
+err_filename = res_filename + ".err"
+err_file = open(err_filename, 'w')
+
 # Open results and log files and initialize them
 res_filename = config['FILES']['RESULTS']
 res_file = open(res_filename, 'w')
@@ -266,6 +261,8 @@ for annot, fitres in res_dict.items():
     print(f"RES LINE: {res_str}\n")
     log_str = fitres['log']
     print(f"LOG LINE: {log_str}\n")
+    err_str = fitres['err']
+    
     try:
         res_file.write(res_str)
     except:
@@ -275,6 +272,11 @@ for annot, fitres in res_dict.items():
             log_file.write(line)
     except:
         print(f"Can't write log: {annot}")
+    try:
+        for line in err_str:
+            err_file.write(line)
+    except:
+        print(f"Can't write err: {annot}")
 
 print("ALL DONE")
 res_file.close()
