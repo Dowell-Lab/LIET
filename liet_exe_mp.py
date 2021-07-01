@@ -14,7 +14,7 @@ import rnap_lib_plotting as pl
 
 ## SLURM INFO =================================================================
 env = os.environ
-cpu_num = os.environ['SLURM_CPUS_ON_NODE']
+cpu_num = int(os.environ['SLURM_CPUS_ON_NODE'])
 
 ## COMMAND LINE INFO ==========================================================
 description_text = ("LIET model executable. Required input: config file.")
