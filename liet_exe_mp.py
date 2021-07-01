@@ -1,4 +1,5 @@
 import sys
+import os
 import time
 import argparse
 import traceback
@@ -10,6 +11,10 @@ import rnap_lib_data_proc as dp
 import rnap_lib_data_sim as ds
 import rnap_lib_fitting_results as fr
 import rnap_lib_plotting as pl
+
+## SLURM INFO =================================================================
+env = os.environ
+cpu_num = os.environ['SLURM_CPUS_ON_NODE']
 
 ## COMMAND LINE INFO ==========================================================
 description_text = ("LIET model executable. Required input: config file.")
@@ -49,6 +54,7 @@ mpargs = {
 # Parallelizable function that performs all the fitting
 def fit_routine(fit_instance, config, pad_dict):
     
+#    time.sleep(30)
     start_time = time.time()
 
     annot, reads = fit_instance
@@ -212,7 +218,7 @@ def fit_routine(fit_instance, config, pad_dict):
             sense=True,
             save=f"liet_plot_{gene_id}.pdf"
         )
-        lplot.close()
+#        lplot.close()
     except:
         print(f"Can't plot fit result for {gene_id}")
         return_dict['err'].append(f"{traceback.format_exc()}\n")
@@ -220,9 +226,9 @@ def fit_routine(fit_instance, config, pad_dict):
     return {annot: return_dict}
 
 # Run fitting in parallel
-print(f"CPU: {mp.cpu_count()}")
+print(f"CPU: {cpu_num}")
 
-pool = mp.Pool(mp.cpu_count())
+pool = mp.Pool(cpu_num)
 res = pool.starmap(fit_routine, [(i, config, pad_dict) for i in mpargs.items()])
 pool.close()
 
@@ -262,7 +268,7 @@ for annot, fitres in res_dict.items():
     log_str = fitres['log']
     print(f"LOG LINE: {log_str}\n")
     err_str = fitres['err']
-    
+
     try:
         res_file.write(res_str)
     except:
