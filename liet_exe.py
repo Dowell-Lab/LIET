@@ -211,6 +211,7 @@ with open(bgp_file, 'r') as bgp, open(bgn_file, 'r') as bgn:
 #    res_file.close()
 #    sys.exit(1)
 
+
 res_file.close()
 log_file.close()
 sys.exit(0)
