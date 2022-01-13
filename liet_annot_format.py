@@ -9,6 +9,8 @@ gene_id_text = ("Path to text file containing list of gene IDs")
 annot_text = ("Path to .gtf file containing annotations. Must contain exon "
     "features as well as 'gene_id' keyword in last column")
 
+fields_text = ("")
+
 parser = argparse.ArgumentParser(description = description_text)
 
 # INPUT GENE LIST
@@ -24,7 +26,20 @@ parser.add_argument(
     help = annot_text
 )
 
+parser.add_argument(
+    '-l', '--labels',
+    type = str,
+    help = annot_text
+)
+
 args = parser.parse_args()
+
+# Parse the labels to keep
+if args.labels:
+    labels = set(args.labels.strip().split(',')[1:])
+# Default to keeping only the good ones (in addition to unlabeled)
+else:
+    labels = set(['good'])
 
 # Read in all the gene IDs
 #gene_ids = []
@@ -33,18 +48,31 @@ args = parser.parse_args()
 #gene_ids = set(gene_ids)
 
 # Read in all the genes and the padded regions
-
 gene_pad = {}
 
 with open(args.ids, 'r') as reg_file:
     for reg in reg_file:
 
         chrom, pstart, pstop, gid = reg.strip().split('\t')
+        gid = gid.strip().split('-')
+
+        # Skip line if it's a bidirectional
+        if gid[0] == 'bidir':
+            continue
+
+        # Keep only those regions whose labels are a subset of those queried
+        reg_labels = set(gid[1:])
+        if reg_labels.issubset(labels):
+            gid = gid[0]
+        elif 'good' in reg_labels:
+            gid = gid[0]
+        else:
+            continue
+
         pstart = int(pstart)
         pstop = int(pstop)
 
         gene_pad[gid] = (chrom, pstart, pstop)
-
 
 gene_ids = set(gene_pad.keys())
 
