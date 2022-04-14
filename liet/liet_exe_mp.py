@@ -14,23 +14,23 @@ import rnap_lib_plotting as pl
 
 def main():
 
-    ## SLURM INFO =================================================================
+    ## SLURM INFO =============================================================
     env = os.environ
     cpu_num = int(os.environ['SLURM_CPUS_ON_NODE'])
 
-    ## COMMAND LINE INFO ==========================================================
+    ## COMMAND LINE INFO ======================================================
     description_text = ("LIET model executable. Required input: config file.")
 
     config_text = ("Path to config file.")
 
     parser = argparse.ArgumentParser(description = description_text)
 
-    ## PARSE ARGS AND OPEN CONFIG =================================================
+    ## PARSE ARGS AND OPEN CONFIG =============================================
     parser.add_argument('-c', '--config', type = str, help = config_text)
     args = parser.parse_args()
     config_file = args.config
 
-    ## PROCESS INPUTS =============================================================
+    ## PROCESS INPUTS =========================================================
 
     # Load config (contents: FILES, MODEL, PRIORS, DATA_PROC, FITTING, RESULTS)
     #config_file = "C:\\Users\\Jacob\\Dropbox\\0DOWELL\\rnap_model\\LIET\\test_config.txt"
