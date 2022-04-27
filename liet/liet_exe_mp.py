@@ -12,6 +12,182 @@ import rnap_lib_data_sim as ds
 import rnap_lib_fitting_results as fr
 import rnap_lib_plotting as pl
 
+
+# Parallelizable function that performs all the fitting
+def fit_routine(fit_instance, config, pad_dict):
+    
+#    time.sleep(30)
+    start_time = time.time()
+
+    annot, reads = fit_instance
+
+    chrom = annot[0]
+    start, stop, strand = annot[1]
+    gene_id = annot[2]
+
+    pad = pad_dict[gene_id]
+    pad_args = [start, stop, strand, pad]
+    adj_start, adj_stop = dp.pad_calc(*pad_args)
+
+#    return_dict = {'res': f"{gene_id}\tERROR", 'log': f">{gene_id}:ERROR"}
+    return_dict = {
+        'res': f"{gene_id}\n", 
+        'log': (f">{gene_id}\n", ), 
+        'err': [f">{gene_id}\n"]
+    }
+
+    # Convert read dict to list
+    preads_list = np.array(dp.reads_d2l(reads[0]))
+    nreads_list = np.array(dp.reads_d2l(reads[1]))
+
+    print(f"RUNNING: {gene_id}")
+
+    try:
+        # Generate model object
+        liet = LIET()
+
+        # Load annotation into LIET class object
+        annot_dict = {
+            'gene_id': gene_id, 
+            'chrom': chrom, 
+            'start': start, 
+            'stop': stop, 
+            'strand': strand
+        }
+        liet.load_annotation(**annot_dict)
+    except:
+        return_dict['res'] = f"{annot_dict['gene_id']}: annot load error\n"
+        return_dict['err'].append(f"{traceback.format_exc()}\n")
+        return {annot: return_dict}
+
+    try:
+        # Load read data into LIET class object
+        coordinates = np.array(range(adj_start, adj_stop))
+        data = {
+            'coord': coordinates, 
+            'pos_reads': preads_list, 
+            'neg_reads': nreads_list, 
+            'pad': pad, 
+            'shift': config['DATA_PROC']['RANGE_SHIFT']
+        }
+        liet.load_seq_data(**data)
+    except:
+        return_dict['res'] = f"{annot_dict['gene_id']}: seq data error\n"
+        return_dict['err'].append(f"{traceback.format_exc()}\n")
+        return {annot: return_dict}
+
+    try:
+        # Load priors
+        if config['DATA_PROC']['RANGE_SHIFT']:
+            tss = 0
+            tcs = abs(stop-start)
+        else:
+            tss = start
+            tcs = stop
+        priors = dp.prior_config(config['PRIORS'], tss, tcs)
+        liet.set_priors(**priors)
+    except:
+        return_dict['res'] = f"{annot_dict['gene_id']}: prior set error\n"
+        return_dict['err'].append(f"{traceback.format_exc()}\n")
+        return {annot: return_dict}
+
+    try:
+        # Build model
+        liet.build_model(
+            antisense=config['MODEL']['ANTISENSE'],
+            background=config['MODEL']['BACKGROUND']
+        )
+    except:
+        return_dict['res'] = f"{annot_dict['gene_id']}: model error\n"
+        return_dict['err'].append(f"{traceback.format_exc()}\n")
+        return {annot: return_dict}
+
+    try:
+        # Fit
+        fit = fr.vi_fit(
+            liet.model,
+            method=config['FIT']['METHOD'],
+            optimizer=config['FIT']['OPTIMIZER'],
+            learning_rate=config['FIT']['LEARNING_RATE'],
+            start=None,                                                 # NEEDS IMPLEMENTATION
+            iterations=config['FIT']['ITERATIONS'],
+            tolerance=config['FIT']['TOLERANCE'],                       # NEED TO FIX IMPLEMENTATION
+            param_tracker=False,                                        # NEEDS IMPLEMENTATION
+        )
+    except:
+        return_dict['res'] = f"{annot_dict['gene_id']}: fitting error\n"
+        return_dict['err'].append(f"{traceback.format_exc()}\n")
+        return {annot: return_dict}
+
+    ## Currently omitting these steps =============================
+    # Evaluate "best fit" values
+    # Evaluate whether or not to refit 
+    # Run refit if convergence criteria not met
+    ## ============================================================
+    #                print("Summarizing post...")
+        # Summarize posteriors
+    try:
+        post_stats = fr.posterior_stats(
+            fit['approx'],
+            N=config['RESULTS']['SAMPLES'],
+            calc_mean=config['RESULTS']['MEAN'],
+            calc_mode=config['RESULTS']['MODE'],
+            calc_median=config['RESULTS']['MEDIAN'],
+            calc_stdev=config['RESULTS']['STDEV'],
+            calc_skew=config['RESULTS']['SKEW']
+        )
+    except:
+        return_dict['res'] = f"{annot_dict['gene_id']}: post stat error\n"
+        return_dict['err'].append(f"{traceback.format_exc()}\n")
+        return {annot: return_dict}
+
+    try:
+        # Record results of fitting
+        res_string = fr.results_format(
+            liet.data['annot'], 
+            post_stats, 
+            stat='mean'
+        )
+        return_dict['res'] = res_string
+    except:
+        return_dict['res'] = f"{annot_dict['gene_id']}: res str error\n"
+        return_dict['err'].append(f"{traceback.format_exc()}\n")
+        return {annot: return_dict}
+
+    try:
+        # Log meta info for fit
+        log_strings = fr.log_format(liet, fit)
+
+        end_time = time.time()
+        fit_time = np.around((end_time - start_time) / 60, 2)
+        time_string = f"fit_time_min:{fit_time}\n"
+        
+        log_strings = (*log_strings, time_string)
+
+        return_dict['log'] = log_strings
+    except:
+        return_dict['res'] = f"{annot_dict['gene_id']}: log str error\n"
+        return_dict['err'].append(f"{traceback.format_exc()}\n")
+        return {annot: return_dict}
+
+    # Plot fit result
+    try:
+        liet.results = post_stats
+        lplot = pl.LIET_plot(
+            liet, 
+            data=True,
+            antisense=True,
+            sense=True,
+            save=f"liet_plot_{gene_id}.pdf"
+        )
+#        lplot.close()
+    except:
+        print(f"Can't plot fit result for {gene_id}")
+        return_dict['err'].append(f"{traceback.format_exc()}\n")
+
+    return {annot: return_dict}
+
+
 def main():
 
     ## SLURM INFO =============================================================
@@ -53,181 +229,7 @@ def main():
         for a, gid in annots.items()
     }
 
-    # Parallelizable function that performs all the fitting
-    def fit_routine(fit_instance, config, pad_dict):
-        
-    #    time.sleep(30)
-        start_time = time.time()
-
-        annot, reads = fit_instance
-
-        chrom = annot[0]
-        start, stop, strand = annot[1]
-        gene_id = annot[2]
-
-        pad = pad_dict[gene_id]
-        pad_args = [start, stop, strand, pad]
-        adj_start, adj_stop = dp.pad_calc(*pad_args)
-
-    #    return_dict = {'res': f"{gene_id}\tERROR", 'log': f">{gene_id}:ERROR"}
-        return_dict = {
-            'res': f"{gene_id}\n", 
-            'log': (f">{gene_id}\n", ), 
-            'err': [f">{gene_id}\n"]
-        }
-
-        # Convert read dict to list
-        preads_list = np.array(dp.reads_d2l(reads[0]))
-        nreads_list = np.array(dp.reads_d2l(reads[1]))
-
-        print(f"RUNNING: {gene_id}")
-
-        try:
-            # Generate model object
-            liet = LIET()
-
-            # Load annotation into LIET class object
-            annot_dict = {
-                'gene_id': gene_id, 
-                'chrom': chrom, 
-                'start': start, 
-                'stop': stop, 
-                'strand': strand
-            }
-            liet.load_annotation(**annot_dict)
-        except:
-            return_dict['res'] = f"{annot_dict['gene_id']}: annot load error\n"
-            return_dict['err'].append(f"{traceback.format_exc()}\n")
-            return {annot: return_dict}
-
-        try:
-            # Load read data into LIET class object
-            coordinates = np.array(range(adj_start, adj_stop))
-            data = {
-                'coord': coordinates, 
-                'pos_reads': preads_list, 
-                'neg_reads': nreads_list, 
-                'pad': pad, 
-                'shift': config['DATA_PROC']['RANGE_SHIFT']
-            }
-            liet.load_seq_data(**data)
-        except:
-            return_dict['res'] = f"{annot_dict['gene_id']}: seq data error\n"
-            return_dict['err'].append(f"{traceback.format_exc()}\n")
-            return {annot: return_dict}
-
-        try:
-            # Load priors
-            if config['DATA_PROC']['RANGE_SHIFT']:
-                tss = 0
-                tcs = abs(stop-start)
-            else:
-                tss = start
-                tcs = stop
-            priors = dp.prior_config(config['PRIORS'], tss, tcs)
-            liet.set_priors(**priors)
-        except:
-            return_dict['res'] = f"{annot_dict['gene_id']}: prior set error\n"
-            return_dict['err'].append(f"{traceback.format_exc()}\n")
-            return {annot: return_dict}
-
-        try:
-            # Build model
-            liet.build_model(
-                antisense=config['MODEL']['ANTISENSE'],
-                background=config['MODEL']['BACKGROUND']
-            )
-        except:
-            return_dict['res'] = f"{annot_dict['gene_id']}: model error\n"
-            return_dict['err'].append(f"{traceback.format_exc()}\n")
-            return {annot: return_dict}
-
-        try:
-            # Fit
-            fit = fr.vi_fit(
-                liet.model,
-                method=config['FIT']['METHOD'],
-                optimizer=config['FIT']['OPTIMIZER'],
-                learning_rate=config['FIT']['LEARNING_RATE'],
-                start=None,                                                 # NEEDS IMPLEMENTATION
-                iterations=config['FIT']['ITERATIONS'],
-                tolerance=config['FIT']['TOLERANCE'],                       # NEED TO FIX IMPLEMENTATION
-                param_tracker=False,                                        # NEEDS IMPLEMENTATION
-            )
-        except:
-            return_dict['res'] = f"{annot_dict['gene_id']}: fitting error\n"
-            return_dict['err'].append(f"{traceback.format_exc()}\n")
-            return {annot: return_dict}
-
-        ## Currently omitting these steps =============================
-        # Evaluate "best fit" values
-        # Evaluate whether or not to refit 
-        # Run refit if convergence criteria not met
-        ## ============================================================
-        #                print("Summarizing post...")
-            # Summarize posteriors
-        try:
-            post_stats = fr.posterior_stats(
-                fit['approx'],
-                N=config['RESULTS']['SAMPLES'],
-                calc_mean=config['RESULTS']['MEAN'],
-                calc_mode=config['RESULTS']['MODE'],
-                calc_median=config['RESULTS']['MEDIAN'],
-                calc_stdev=config['RESULTS']['STDEV'],
-                calc_skew=config['RESULTS']['SKEW']
-            )
-        except:
-            return_dict['res'] = f"{annot_dict['gene_id']}: post stat error\n"
-            return_dict['err'].append(f"{traceback.format_exc()}\n")
-            return {annot: return_dict}
-
-        try:
-            # Record results of fitting
-            res_string = fr.results_format(
-                liet.data['annot'], 
-                post_stats, 
-                stat='mean'
-            )
-            return_dict['res'] = res_string
-        except:
-            return_dict['res'] = f"{annot_dict['gene_id']}: res str error\n"
-            return_dict['err'].append(f"{traceback.format_exc()}\n")
-            return {annot: return_dict}
-
-        try:
-            # Log meta info for fit
-            log_strings = fr.log_format(liet, fit)
-
-            end_time = time.time()
-            fit_time = np.around((end_time - start_time) / 60, 2)
-            time_string = f"fit_time_min:{fit_time}\n"
-            
-            log_strings = (*log_strings, time_string)
-
-            return_dict['log'] = log_strings
-        except:
-            return_dict['res'] = f"{annot_dict['gene_id']}: log str error\n"
-            return_dict['err'].append(f"{traceback.format_exc()}\n")
-            return {annot: return_dict}
-
-        # Plot fit result
-        try:
-            liet.results = post_stats
-            lplot = pl.LIET_plot(
-                liet, 
-                data=True,
-                antisense=True,
-                sense=True,
-                save=f"liet_plot_{gene_id}.pdf"
-            )
-    #        lplot.close()
-        except:
-            print(f"Can't plot fit result for {gene_id}")
-            return_dict['err'].append(f"{traceback.format_exc()}\n")
-
-        return {annot: return_dict}
-
-    # Run fitting in parallel
+    # RUN PARALLEL FITTING ====================================================
     print(f"CPU: {cpu_num}")
 
     pool = mp.Pool(cpu_num)
@@ -244,7 +246,7 @@ def main():
 
     print("Fitting complete")
 
-    # Convert `res` tuple into a dictionary
+    # Convert 'res' tuple into a dictionary
     res_dict = {}
     for i in res:
     #    print(f"ref: {i}")
