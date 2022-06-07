@@ -112,7 +112,7 @@ def config_loader(config_file):
         'FIT': {'ITERATIONS':None, 'LEARNING_RATE':None, 'METHOD':None,
             'OPTIMIZER':None, 'MEANFIELD':None, 'TOLERANCE':None}, 
         'RESULTS': {'SAMPLES':None, 'MEAN':None, 'MODE':None, 'MEDIAN': None, 
-            'STDEV':None, 'SKEW':None}
+            'STDEV':None, 'SKEW':None, PDF: False}
     }
 
     with open(config_file, 'r') as f:
@@ -196,7 +196,8 @@ def config_loader(config_file):
                     raise ValueError(f"Input {pname} must be an integer.")
             elif pname in ['MEAN', 'MODE', 'MEDIAN', 'STDEV', 'SKEW']:
                 config[category][pname] = bool_cast(pval)
-
+            elif pname == 'PDF':
+                config[category][pname] = bool_cast(pval)
             else:
                 raise ValueError(f"Incorrect input parameter: {pname}")
     
