@@ -5,6 +5,7 @@ import argparse
 import traceback
 import numpy as np
 import multiprocessing as mp
+import matplotlib.pyplot as plt
 
 from rnap_lib_LIET_class import LIET
 import rnap_lib_data_proc as dp
@@ -178,9 +179,10 @@ def fit_routine(fit_instance, config, pad_dict):
             data=True,
             antisense=True,
             sense=True,
-            save=f"liet_plot_{gene_id}.pdf"
+            save=config['RESULTS']['PDF']
+            #save=f"liet_plot_{gene_id}.pdf"
         )
-#        lplot.close()
+        plt.close(lplot)
     except:
         print(f"Can't plot fit result for {gene_id}")
         return_dict['err'].append(f"{traceback.format_exc()}\n")
