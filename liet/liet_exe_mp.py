@@ -172,21 +172,25 @@ def fit_routine(fit_instance, config, pad_dict):
         return {annot: return_dict}
 
     # Plot fit result
-    try:
-        liet.results = post_stats
-        lplot = pl.LIET_plot(
-            liet, 
-            data=True,
-            antisense=True,
-            sense=True,
-            save=config['RESULTS']['PDF']
-            #save=f"liet_plot_{gene_id}.pdf"
-        )
-        plt.close(lplot)
-    except:
-        print(f"Can't plot fit result for {gene_id}")
-        return_dict['err'].append(f"{traceback.format_exc()}\n")
-
+    if config['RESULTS']['PDF']:
+        try:
+            # Add posterior stats to liet object before plotting.
+            liet.results = post_stats
+            lplot = pl.LIET_plot(
+                liet, 
+                data=True,
+                antisense=True,
+                sense=True,
+                save=config['RESULTS']['PDF']
+                #save=f"liet_plot_{gene_id}.pdf"
+            )
+            plt.close(lplot)
+        except:
+            print(f"Can't plot fit result for {gene_id}")
+            return_dict['err'].append(f"{traceback.format_exc()}\n")
+    else:
+        pass
+    
     return {annot: return_dict}
 
 
