@@ -112,7 +112,7 @@ def config_loader(config_file):
         'FIT': {'ITERATIONS':None, 'LEARNING_RATE':None, 'METHOD':None,
             'OPTIMIZER':None, 'MEANFIELD':None, 'TOLERANCE':None}, 
         'RESULTS': {'SAMPLES':None, 'MEAN':None, 'MODE':None, 'MEDIAN': None, 
-            'STDEV':None, 'SKEW':None, PDF: False}
+            'STDEV':None, 'SKEW':None, 'PDF': False}
     }
 
     with open(config_file, 'r') as f:
