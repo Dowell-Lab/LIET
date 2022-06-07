@@ -114,7 +114,7 @@ def LIET_plot(
         fig_size=(10, 7),
         xlim=None,
         ylim=None,
-        save=None,
+        save=False,
         dpi=600):
     '''
     Plot the model pdf that results from fitting. `stat` specifies which 
@@ -373,7 +373,7 @@ def LIET_plot(
         )
         return 0
 
-    if isinstance(save, str):
+    if save:
         plt.savefig(save, bbox_inches='tight', dpi=dpi)
 
     return fig
