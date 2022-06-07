@@ -46,7 +46,7 @@ MODE=False
 MEDIAN=False
 STDEV=True
 SKEW=False
-
+PDF=False
 
 
 #mL=dist:uniform,mu:9,sigma:100
