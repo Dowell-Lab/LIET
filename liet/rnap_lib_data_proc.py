@@ -34,7 +34,7 @@ def annot_BED6_loader(annot_file, pad5, pad3):
     with open(annot_file, 'r') as af:
         chromosomes = set()
         for line in af:
-            chrom = str(line[0].strip().split('\t'))
+            chrom = str(line.strip().split('\t')[0])
             chromosomes.add(chrom)
     
     annot = {ch:{} for ch in sorted(chromosomes)}
