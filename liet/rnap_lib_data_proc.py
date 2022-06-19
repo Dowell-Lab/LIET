@@ -38,7 +38,6 @@ def annot_BED6_loader(annot_file, pad5, pad3):
             chromosomes.add(chrom)
     
     annot = {ch:{} for ch in sorted(chromosomes)}
-    print(annot)
 
     # Open BED6 file (tab delimited: chr, start, stop, id, score, strand)
     with open(annot_file, 'r') as af:
@@ -50,19 +49,22 @@ def annot_BED6_loader(annot_file, pad5, pad3):
                 raise ValueError(f"Annotation at line {i} is incorrectly "
                     f"formatted. See: '{line}'")
 
-#            try:
-            chrom = str(line[0])
-            start = int(line[1])
-            stop = int(line[2])
-            id = str(line[3])
-            strnd = strand_dict[line[5]]
-            annot[chrom][(start, stop, strnd)] = id
+            try:
+                chrom = str(line[0])
+                start = int(line[1])
+                stop = int(line[2])
+                id = str(line[3])
+                strnd = strand_dict[line[5]]
+                annot[chrom][(start, stop, strnd)] = id
 
-            pad[id] = (int(pad5), int(pad3))
+                pad[id] = (int(pad5), int(pad3))
 
-#            except:
-#                raise ValueError(f"Annotation at line {i} is incorrectly "
-#                    f"formatted. See: '{line}'")
+            except KeyError:
+                raise KeyError(f"One or both keys {chrom} and {id} do not"
+                    "exist.")
+            except:
+                raise ValueError(f"Can't parse line {i}. Incorrectly "
+                    f"formatted. See: '{line}'")
 
     # Sort the regions of interest for each chromosome and write to out dict
     annot_sorted = {}
