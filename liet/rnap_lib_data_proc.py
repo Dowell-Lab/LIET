@@ -38,7 +38,8 @@ def annot_BED6_loader(annot_file, pad5, pad3):
             chromosomes.add(chrom)
     
     annot = {ch:{} for ch in sorted(chromosomes)}
-
+    print(annot)
+    
     # Open BED6 file (tab delimited: chr, start, stop, id, score, strand)
     with open(annot_file, 'r') as af:
 
