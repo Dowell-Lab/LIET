@@ -17,12 +17,69 @@ def annotation(chrom=None, start=None, stop=None, strand=None):
     return out
 
 
+def annot_BED6_loader(annot_file, pad5, pad3):
+    '''
+    Loads annotations from BED6 file into a dictionary and then sorts 
+    them by genomic coordinate and strand. Returns sorted dict of form:
+    annot_sorted: {'chr#': {(start, stop, strand): gene_id, ...}, ...}
+    pad: {gene_id: (pad5, pad3), ... }
+    
+    Only uses the following fields from the BED6 formatted input: 
+    chr (0), start (1), stop (2), name (3), strand (5)
+    '''
+    strand_dict = {'+': 1, '-': -1}
+    pad = {}
+
+    # Initialize annotation dictionary with chrom ID's in annot file
+    with open(annot_file, 'r') as af:
+        chromosomes = set()
+        for line in af:
+            chrom = str(line[0])
+            chromosomes.add(chrom)
+    
+    annot = {ch:{} for ch in sorted(chromosomes)}
+
+    # Open BED6 file (tab delimited: chr, start, stop, id, score, strand)
+    with open(annot_file, 'r') as af:
+
+        for i, line in enumerate(af):
+            line = line.strip().split('\t')
+
+            if len(line) != 6:
+                raise ValueError(f"Annotation at line {i} is incorrectly "
+                    f"formatted. See: '{line}'")
+
+            try:
+                chrom = str(line[0])
+                start = int(line[1])
+                stop = int(line[2])
+                id = str(line[3])
+                strnd = strand_dict[line[5]]
+                annot[chrom][(start, stop, strnd)] = id
+
+                pad[id] = (int(pad5), int(pad3))
+
+            except:
+                raise ValueError(f"Annotation at line {i} is incorrectly "
+                    f"formatted. See: '{line}'")
+
+    # Sort the regions of interest for each chromosome and write to out dict
+    annot_sorted = {}
+    for ch, rois in annot.items():
+        if rois != {}:
+            annot_sorted[ch] = {r:annot[ch][r] for r in sorted(rois.keys())}
+        else:
+            continue
+    
+    return annot_sorted, pad
+
 
 def annot_loader(annot_file):
     '''
     Loads annotations from basic gtf file into a dictionary and then sorts 
     them by genomic coordinate and strand. Returns sorted dict of form:
-    {'chr#': {(start, stop, strand): gene_id, ...}, ...}
+    annot_sorted: {'chr#': {(start, stop, strand): gene_id, ...}, ...}
+    pad: {gene_id: (pad5, pad3), ... }
     '''
 
     chromosomes = [
