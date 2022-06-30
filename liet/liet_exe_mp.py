@@ -220,7 +220,9 @@ def main():
 
     # Parse annotation file
     annot_file = config['FILES']['ANNOTATION']
-    annot_dict, pad_dict = dp.annot_loader(annot_file)
+#    annot_dict, pad_dict = dp.annot_loader(annot_file)                         # This old annotation loader is not compatible with the BED6 format I'm using now, output from Mary's hermits script
+    pad5, pad3 = config['DATA_PROC']['PAD']
+    annot_dict, pad_dict = dp.annot_BED6_loader(annot_file, pad5, pad3)
 
     # Open bedgraph files and load reads
     bgp_file = config['FILES']['BEDGRAPH_POS']
