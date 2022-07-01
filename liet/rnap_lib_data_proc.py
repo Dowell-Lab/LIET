@@ -450,7 +450,7 @@ def reads_d2l(readdict):
     return readlist
 
 
-def chrom_order(bedgraph_file1, bedgraph_file2):
+def chrom_order_reader(bedgraph_file1, bedgraph_file2):
     '''
     Create a dictionary containing an ordered set of chromosome strings. The 
     chromosome strings are the keys and the values are the indexing values. 
@@ -475,18 +475,18 @@ def chrom_order(bedgraph_file1, bedgraph_file2):
     return chr_order
     
 
-def bglist_check(bglist, chromosome, begin, end):
+def bglist_check(bglist, chromosome, begin, end, chr_order):
     '''
     Checks if <bglist> is upstream, overlapping or downstream of annot. Returns
      +1, 0, -1 respectively. Annotation given by <chromosome>, <begin>, and 
     <end>.
     '''
-    chr_order = {
-        'chr1':1, 'chr2':2, 'chr3':3, 'chr4':4, 'chr5':5, 'chr6':6, 'chr7':7, 
-        'chr8':8, 'chr9':9, 'chr10':10, 'chr11':11, 'chr12':12, 'chr13':13, 
-        'chr14':14, 'chr15':15, 'chr16':16, 'chr17':17, 'chr18':18, 'chr19':19,
-        'chr20':20, 'chr21':21, 'chr22':22, 'chr23':23, 'chrX':24, 'chrY':25
-    }
+    #chr_order = {
+    #    'chr1':1, 'chr2':2, 'chr3':3, 'chr4':4, 'chr5':5, 'chr6':6, 'chr7':7, 
+    #    'chr8':8, 'chr9':9, 'chr10':10, 'chr11':11, 'chr12':12, 'chr13':13, 
+    #    'chr14':14, 'chr15':15, 'chr16':16, 'chr17':17, 'chr18':18, 'chr19':19,
+    #    'chr20':20, 'chr21':21, 'chr22':22, 'chr23':23, 'chrX':24, 'chrY':25
+    #}
 
     chl = chr_order[bglist[0]]
     cha = chr_order[chromosome]
@@ -620,7 +620,7 @@ def add_bg_dict(bglist, begin, end, reads_dict):
 #         return bglist, preads, nreads
 
 
-def bgreads(bg, current_bg_list, chromosome, begin, end):
+def bgreads(bg, current_bg_list, chromosome, begin, end, chr_order):
     '''
     Primary method for processing bedgraph lines and converting them to read
     lists appropriate for loading into LIET class instance. 
@@ -646,6 +646,10 @@ def bgreads(bg, current_bg_list, chromosome, begin, end):
     end : int
         Last genomic coordinate of the annotation being evaluated.
 
+    chr_order : dict
+        Dictionary containing the ordering of chromosome strings. The keys are 
+        the chromosome ID strings read from the bedgraph files and the values 
+        are their numeric indexes.
 
     Returns
     -------
@@ -661,7 +665,7 @@ def bgreads(bg, current_bg_list, chromosome, begin, end):
     reads = {}
     
     # Process current line
-    loc = bglist_check(current_bg_list, chromosome, begin, end)
+    loc = bglist_check(current_bg_list, chromosome, begin, end, chr_order)
     # Overlapping
     if loc == 0:
         add_bg_dict(current_bg_list, begin, end, reads) #Update w/ new reads
@@ -675,7 +679,7 @@ def bgreads(bg, current_bg_list, chromosome, begin, end):
     # Iterate through bedgraph until reaching first downstream line
     for bgline in bg:
         bglist = bgline_cast(bgline)
-        loc = bglist_check(bglist, chromosome, begin, end)
+        loc = bglist_check(bglist, chromosome, begin, end, chr_order)
         # Upstream
         if loc == 1:
             continue
@@ -774,6 +778,9 @@ def bedgraph_loader(bgp_file, bgn_file, annot_dict, pad_dict):
     '''
     read_dict = {}
 
+    # Determine chromosome string order
+    chr_order = chrom_order_reader(bgp_file, bgn_file)
+
     with open(bgp_file, 'r') as bgp, open(bgn_file, 'r') as bgn:
         current_bgpl = ['chr1', 0, 0, 0]    # Initialize pos strand bg line
         current_bgnl = ['chr1', 0, 0, 0]    # Initialize neg strand bg line
@@ -791,10 +798,24 @@ def bedgraph_loader(bgp_file, bgn_file, annot_dict, pad_dict):
                 adj_start, adj_stop = pad_calc(*pad_args)
 
                 # Extract reads
-                bgp_args = [bgp, current_bgpl, chromosome, adj_start, adj_stop]
+                bgp_args = [
+                    bgp, 
+                    current_bgpl, 
+                    chromosome, 
+                    adj_start, 
+                    adj_stop,
+                    chr_order
+                ]
                 current_bgpl, preads = bgreads(*bgp_args)
                 
-                bgn_args = [bgn, current_bgnl, chromosome, adj_start, adj_stop]
+                bgn_args = [
+                    bgn, 
+                    current_bgnl, 
+                    chromosome, 
+                    adj_start, 
+                    adj_stop,
+                    chr_order
+                ]
                 current_bgnl, nreads = bgreads(*bgn_args)
 
                 # Assign reads to output dict
