@@ -471,7 +471,7 @@ def chrom_order_reader(bedgraph_file1, bedgraph_file2):
         print("WARNING: BedGraph files do not have all the same chromosomes.", 
             file=sys.stderr)
     
-    chr_order = dict([tuple(reversed(t)) for t in enumerate(chrom1) if t[1] in chrom1.keys()])
+    chr_order = dict([tuple(reversed(t)) for t in enumerate(chrom1) if t[1] in common])
     return chr_order
     
 
