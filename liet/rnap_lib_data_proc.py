@@ -1,3 +1,4 @@
+import sys
 import numpy as np
 import copy
 from collections import defaultdict
@@ -448,6 +449,31 @@ def reads_d2l(readdict):
         
     return readlist
 
+
+def chrom_order(bedgraph_file1, bedgraph_file2):
+    '''
+    Create a dictionary containing an ordered set of chromosome strings. The 
+    chromosome strings are the keys and the values are the indexing values. 
+    The strings are sourced from the two bedgraph files, preserving the order. 
+    Format: {'chr1': 1, 'chr2': 2, ...}
+    '''
+    with open(bedgraph_file1, 'r') as bgf:
+        chrom1 = [line.strip().split('\t')[0] for line in bgf]
+    with open(bedgraph_file2, 'r') as bgf:
+        chrom2 = [line.strip().split('\t')[0] for line in bgf]
+
+    chrom1 = sorted(set(chrom1), key=chrom1.index)
+    chrom2 = sorted(set(chrom2), key=chrom2.index)
+
+    common = set(chrom1).intersection(set(chrom2))
+
+    if set(chrom1) != common:
+        print("WARNING: BedGraph files do not have all the same chromosomes.", 
+            file=sys.stderr)
+    
+    chr_order = dict([tuple(reversed(t)) for t in enumerate(chrom1)])
+    return chr_order
+    
 
 def bglist_check(bglist, chromosome, begin, end):
     '''
