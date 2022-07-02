@@ -488,16 +488,30 @@ def bglist_check(bglist, chromosome, begin, end, chr_order):
     #    'chr20':20, 'chr21':21, 'chr22':22, 'chr23':23, 'chrX':24, 'chrY':25
     #}
 
-    chl = chr_order[bglist[0]]
-    cha = chr_order[chromosome]
-    i = bglist[1]
-    f = bglist[2]
+    # Determine bedgraph line and annot chromosome indexes
+    try:
+        bg_chrom = bglist[0]
+        bg_idx = chr_order[bg_chrom]
+    except KeyError:
+        print(f"WARNING: {bg_chrom} is not contained in shared chr IDs",
+            file=sys.stderr)
+        return None
+    try:
+        annot_idx = chr_order[chromosome]
+    except KeyError:
+        print(f"WARNING: {chromosome} is not contained in shared chr IDs", 
+            file=sys.stderr)
+        return None
+
+    # Initial/final base positions for bedGraph line
+    initial = bglist[1]
+    final = bglist[2]
     
     # bedgraph list on upstream chromosome or upstream on same chromosome
-    if chl < cha or (chl == cha and f < begin):
+    if bg_idx < annot_idx or (bg_idx == annot_idx and final < begin):
         return 1
     # bedgraph list on downstream chromosome or downstream on same chromosome
-    elif chl > cha or (chl == cha and i > end):
+    elif bg_idx > annot_idx or (bg_idx == annot_idx and initial > end):
         return -1
     # bedgraph list is overlapping annotation
     else:
@@ -672,7 +686,7 @@ def bgreads(bg, current_bg_list, chromosome, begin, end, chr_order):
     # Downstream
     elif loc == -1:
         return current_bg_list, reads
-    # Upstream
+    # Upstream (1) or wrong chromosome (None)
     else:
         pass
     
@@ -680,8 +694,8 @@ def bgreads(bg, current_bg_list, chromosome, begin, end, chr_order):
     for bgline in bg:
         bglist = bgline_cast(bgline)
         loc = bglist_check(bglist, chromosome, begin, end, chr_order)
-        # Upstream
-        if loc == 1:
+        # Upstream or invalid chr
+        if loc == 1 or loc == None:
             continue
         # Overlap
         elif loc == 0:
