@@ -32,11 +32,13 @@ class FitParse:
 
             for line in rf:
                 # Iterate through header
-                while line[0] == '#':
-                    print(line)
+                if line[0] == '#':
                     line_list = line[1:].strip().split()
                     if line_list[0] == "CONFIG":
                         self.config = line_list[1]
+                    continue
+                else:
+                    pass
                 
                 # Check line has a fit result
                 line_list = line.strip().split('\t')
