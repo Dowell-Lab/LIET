@@ -76,3 +76,23 @@ class FitParse:
                     temp[p] = (v_m, v_s)
                 
                 self.fits[gid] = temp
+
+    
+    def mL(self, stdev=False):
+        '''
+        Extract mL values (ordered based on genes list) from fits dictionary 
+        and output them to a list.
+        '''
+        ml_vals = []
+        if stdev:
+            ml_stdev = []
+
+        for g in self.genes:
+            ml_vals.append(self.fits[g]['mL'][0])
+            if stdev:
+                ml_stdev.append(self.fits[g]['mL'][1])
+
+        if stdev:
+            return ml_vals, ml_stdev
+        else:
+            return ml_vals
