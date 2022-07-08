@@ -77,7 +77,18 @@ class FitParse:
                 
                 self.fits[gid] = temp
     
+        self.mL = self.param('mL')
+        self.sL = self.param('sL')
+        self.tI = self.param('tI')
+        self.mT = self.param('mT')
+        self.sT = self.param('sT')
+        self.w = self.param('w')
+        self.mL_a = self.param('mL_a')
+        self.sL_a = self.param('sL_a')
+        self.tI_a = self.param('tI_a')
+        self.w_a = self.param('w_a')
     
+
     def param(self, p, stdev=False):
         '''
         Extract param (p) values (ordered based on genes list) from fits 
@@ -96,17 +107,3 @@ class FitParse:
             return param_vals, param_stdev
         else:
             return param_vals
-
-
-    # Extract lists of the parameter values
-    mL = param(self, 'mL')
-    sL = param(self, 'sL')
-    tI = param(self, 'tI')
-    mT = param(self, 'mT')
-    sT = param(self, 'sT')
-    w = param(self, 'w')
-    mL_a = param(self, 'mL_a')
-    sL_a = param(self, 'sL_a')
-    tI_a = param(self, 'tI_a')
-    w_a = param(self, 'w_a')
-        
