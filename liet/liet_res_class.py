@@ -99,14 +99,14 @@ class FitParse:
 
 
     # Extract lists of the parameter values
-    mL = param('mL')
-    sL = param('sL')
-    tI = param('tI')
-    mT = param('mT')
-    sT = param('sT')
-    w = param('w')
-    mL_a = param('mL_a')
-    sL_a = param('sL_a')
-    tI_a = param('tI_a')
-    w_a = param('w_a')
+    mL = param(self, 'mL')
+    sL = param(self, 'sL')
+    tI = param(self, 'tI')
+    mT = param(self, 'mT')
+    sT = param(self, 'sT')
+    w = param(self, 'w')
+    mL_a = param(self, 'mL_a')
+    sL_a = param(self, 'sL_a')
+    tI_a = param(self, 'tI_a')
+    w_a = param(self, 'w_a')
         
