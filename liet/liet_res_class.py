@@ -76,23 +76,37 @@ class FitParse:
                     temp[p] = (v_m, v_s)
                 
                 self.fits[gid] = temp
-
     
-    def mL(self, stdev=False):
+    
+    def param(self, p, stdev=False):
         '''
-        Extract mL values (ordered based on genes list) from fits dictionary 
-        and output them to a list.
+        Extract param (p) values (ordered based on genes list) from fits 
+        dictionary and output them to a list.
         '''
-        ml_vals = []
+        param_vals = []
         if stdev:
-            ml_stdev = []
+            param_stdev = []
 
         for g in self.genes:
-            ml_vals.append(self.fits[g]['mL'][0])
+            param_vals.append(self.fits[g][p][0])
             if stdev:
-                ml_stdev.append(self.fits[g]['mL'][1])
+                param_stdev.append(self.fits[g][p][1])
 
         if stdev:
-            return ml_vals, ml_stdev
+            return param_vals, param_stdev
         else:
-            return ml_vals
+            return param_vals
+
+
+    # Extract lists of the parameter values
+    mL = param('mL')
+    sL = param('sL')
+    tI = param('tI')
+    mT = param('mT')
+    sT = param('sT')
+    w = param('w')
+    mL_a = param('mL_a')
+    sL_a = param('sL_a')
+    tI_a = param('tI_a')
+    w_a = param('w_a')
+        
