@@ -107,3 +107,40 @@ class FitParse:
             return param_vals, param_stdev
         else:
             return param_vals
+
+
+# Intersecting function for instances of FitParse class =======================
+def fitparse_intersect(*samples):
+    '''
+    Identifies the results that are common to all class instances.
+    '''
+    # Identify genes shared across all fits
+    gene_sets_list = [set(i.genes) for i in samples]
+    gene_set_overlap = set.intersection(*gene_sets_list)
+    intersect_genes = list(
+        filter(lambda gene: gene in gene_set_overlap, samples[0].genes)
+    )
+
+    for samp in samples:
+        # Identify original indexes for intersect genes
+        gene_indexes = [samp.genes.index(g) for g in intersect_genes]
+        # Reassign gene list (order preserved)
+        samp.genes = intersect_genes
+        
+        for param in samp.definitions.keys():
+            # Select param values based on intersected gene indexes and 
+            # reassign to fit class
+            intersect_param_vals = [
+                val for i, val in enumerate(vars(samp)[param]) 
+                if i in gene_indexes
+            ]
+            vars(samp).update({param: intersect_param_vals})
+            
+        # Filter the fits and annotations dict on intersect genes
+        original_genes = list(samp.fits.keys())
+        for gene in original_genes:
+            if gene in intersect_genes:
+                continue
+            else:
+                samp.fits.pop(gene)
+                samp.annotations.pop(gene)
