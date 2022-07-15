@@ -76,7 +76,8 @@ class FitParse:
                     temp[p] = (v_m, v_s)
                 
                 self.fits[gid] = temp
-    
+
+        # Extract and assign all the variable arrays
         self.mL = self.param_extract('mL')
         self.sL = self.param_extract('sL')
         self.tI = self.param_extract('tI')
@@ -84,9 +85,9 @@ class FitParse:
         # Recalculate mT values so they are relative to end of annotation
         absolute_mT = self.param_extract('mT')
         relative_mT = []
-        for g, i in enumerate(self.genes):
-            tss = self.annotations[g]['start']
-            tcs = self.annotations[g]['stop']
+        for i, gene in enumerate(self.genes):
+            tss = self.annotations[gene]['start']
+            tcs = self.annotations[gene]['stop']
             diff = abs(tcs - tss)
             relative_mT.append(absolute_mT[i] - diff)
         self.mT = relative_mT
