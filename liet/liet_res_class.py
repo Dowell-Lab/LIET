@@ -86,8 +86,8 @@ class FitParse:
         absolute_mT = self.param_extract('mT')
         relative_mT = []
         for i, gene in enumerate(self.genes):
-            tss = self.annotations[gene]['start']
-            tcs = self.annotations[gene]['stop']
+            tss = self.annotations[gene][1]
+            tcs = self.annotations[gene][2]
             diff = abs(tcs - tss)
             relative_mT.append(absolute_mT[i] - diff)
         self.mT = relative_mT
