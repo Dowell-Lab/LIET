@@ -15,7 +15,7 @@ class FitParse:
             "mL": "Sense strand loading position (mu)",
             "sL": "Sense strand loading stdev (sigma)",
             "tI": "Sense strand initiation length (tau)",
-            "mT": "Sense strand termination position (mu)",
+            "mT": "Sense strand termination position (mu) relative to TCS",
             "sT": "Sense strand termination stdev (sigma)",
             "w": "Sense strand weights [load, elong, terminate, background]",
             "mL_a": "Antisense strand loading position (mu)",
@@ -40,7 +40,7 @@ class FitParse:
                 else:
                     pass
                 
-                # Check line has a fit result
+                # Check line (gene) has a fit result
                 line_list = line.strip().split('\t')
                 if len(line_list) != 6:
                     if "error" in line_list:
@@ -77,19 +77,29 @@ class FitParse:
                 
                 self.fits[gid] = temp
     
-        self.mL = self.param('mL')
-        self.sL = self.param('sL')
-        self.tI = self.param('tI')
-        self.mT = self.param('mT')
-        self.sT = self.param('sT')
-        self.w = self.param('w')
-        self.mL_a = self.param('mL_a')
-        self.sL_a = self.param('sL_a')
-        self.tI_a = self.param('tI_a')
-        self.w_a = self.param('w_a')
+        self.mL = self.param_extract('mL')
+        self.sL = self.param_extract('sL')
+        self.tI = self.param_extract('tI')
+        
+        # Recalculate mT values so they are relative to end of annotation
+        absolute_mT = self.param_extract('mT')
+        relative_mT = []
+        for g, i in enumerate(self.genes):
+            tss = self.annotations[g]['start']
+            tcs = self.annotations[g]['stop']
+            diff = abs(tcs - tss)
+            relative_mT.append(absolute_mT[i] - diff)
+        self.mT = relative_mT
+
+        self.sT = self.param_extract('sT')
+        self.w = self.param_extract('w')
+        self.mL_a = self.param_extract('mL_a')
+        self.sL_a = self.param_extract('sL_a')
+        self.tI_a = self.param_extract('tI_a')
+        self.w_a = self.param_extract('w_a')
     
 
-    def param(self, p, stdev=False):
+    def param_extract(self, p, stdev=False):
         '''
         Extract param (p) values (ordered based on genes list) from fits 
         dictionary and output them to a list.
