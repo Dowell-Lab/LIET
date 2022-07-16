@@ -78,12 +78,12 @@ class FitParse:
                 self.fits[gid] = temp
 
         # Extract and assign all the variable arrays
-        self.mL = self.param_extract('mL')
-        self.sL = self.param_extract('sL')
-        self.tI = self.param_extract('tI')
+        self.mL, self.mL_std = self.param_extract('mL', stdev=True)
+        self.sL, self.sL_std = self.param_extract('sL', stdev=True)
+        self.tI, self.tI_std = self.param_extract('tI', stdev=True)
         
         # Recalculate mT values so they are relative to end of annotation
-        absolute_mT = self.param_extract('mT')
+        absolute_mT, self.mT_std = self.param_extract('mT', stdev=True)
         relative_mT = []
         for i, gene in enumerate(self.genes):
             tss = self.annotations[gene][1]
@@ -92,12 +92,12 @@ class FitParse:
             relative_mT.append(absolute_mT[i] - diff)
         self.mT = relative_mT
 
-        self.sT = self.param_extract('sT')
-        self.w = self.param_extract('w')
-        self.mL_a = self.param_extract('mL_a')
-        self.sL_a = self.param_extract('sL_a')
-        self.tI_a = self.param_extract('tI_a')
-        self.w_a = self.param_extract('w_a')
+        self.sT, self.sT_std = self.param_extract('sT', stdev=True)
+        self.w, self.w_std = self.param_extract('w', stdev=True)
+        self.mL_a, self.mL_a_std = self.param_extract('mL_a', stdev=True)
+        self.sL_a, self.sL_a_std = self.param_extract('sL_a', stdev=True)
+        self.tI_a, self.tI_a_std = self.param_extract('tI_a', stdev=True)
+        self.w_a, self.w_a_std = self.param_extract('w_a', stdev=True)
     
 
     def param_extract(self, p, stdev=False):
@@ -121,9 +121,11 @@ class FitParse:
 
 
 # Intersecting function for instances of FitParse class =======================
-def fitparse_intersect(*samples):
+def fitparse_intersect(*samples, stdev=True):
     '''
-    Identifies the results that are common to all class instances.
+    Identifies the gene fit results that are common to all class instances and 
+    filters all fit parameter results to only include those from the common 
+    set of genes. 
     '''
     # Identify genes shared across all fits
     gene_sets_list = [set(i.genes) for i in samples]
@@ -147,6 +149,13 @@ def fitparse_intersect(*samples):
             ]
             vars(samp).update({param: intersect_param_vals})
             
+            if stdev:
+                intersect_param_std = [
+                    val for i, val in enumerate(vars(samp+"_std")[param]) 
+                    if i in gene_indexes
+                ]
+                vars(samp+"_std").update({param: intersect_param_std})
+
         # Filter the fits and annotations dict on intersect genes
         original_genes = list(samp.fits.keys())
         for gene in original_genes:
