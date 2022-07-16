@@ -151,10 +151,10 @@ def fitparse_intersect(*samples, stdev=True):
             
             if stdev:
                 intersect_param_std = [
-                    val for i, val in enumerate(vars(samp+"_std")[param]) 
+                    val for i, val in enumerate(vars(samp)[param+"_std"]) 
                     if i in gene_indexes
                 ]
-                vars(samp+"_std").update({param: intersect_param_std})
+                vars(samp).update({param+"_std": intersect_param_std})
 
         # Filter the fits and annotations dict on intersect genes
         original_genes = list(samp.fits.keys())
