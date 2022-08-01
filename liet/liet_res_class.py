@@ -99,25 +99,27 @@ class FitParse:
         self.tI_a, self.tI_a_std = self.param_extract('tI_a', stdev=True)
         self.w_a, self.w_a_std = self.param_extract('w_a', stdev=True)
     
-    if log_file:
-        self.log = OrderedDict()
-        with open(log_file, 'r') as lf:
-            for line in lf:
-                if line[0] == '#':
-                    continue
-                elif line[0] == '>':
-                    line = line.strip().split(':')
-                    gene_id = line[0][1:]
-                    self.log[gene_id] = dict()
-                else:
-                    field, value = line.strip().split(':')
-                    if field == 'strand_cov':
-                        value = tuple(map(int, value.strip('()').split(',')))
-                    elif field == 'elbo_range':
-                        value = tuple(map(float, value.strip('()').split(',')))
-                    else:
+        if log_file:
+            self.log = OrderedDict()
+            with open(log_file, 'r') as lf:
+                for line in lf:
+                    if line[0] == '#':
                         continue
-                    self.log[gene_id].update({field: value})
+                    elif line[0] == '>':
+                        line = line.strip().split(':')
+                        gene_id = line[0][1:]
+                        self.log[gene_id] = dict()
+                    else:
+                        field, value = line.strip().split(':')
+                        if field == 'strand_cov':
+                            value = value.strip('()').split(',')
+                            value = tuple(map(int, value))
+                        elif field == 'elbo_range':
+                            value = value.strip('()').split(',')
+                            value = tuple(map(float, value))
+                        else:
+                            continue
+                        self.log[gene_id].update({field: value})
 
 
 
