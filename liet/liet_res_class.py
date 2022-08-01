@@ -110,6 +110,7 @@ class FitParse:
                         gene_id = line[0][1:]
                         self.log[gene_id] = dict()
                     else:
+                        print(line)
                         field, value = line.strip().split(':')
                         if field == 'strand_cov':
                             value = value.strip('()').split(',')
