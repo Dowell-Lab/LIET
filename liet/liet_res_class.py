@@ -98,7 +98,8 @@ class FitParse:
         self.sL_a, self.sL_a_std = self.param_extract('sL_a', stdev=True)
         self.tI_a, self.tI_a_std = self.param_extract('tI_a', stdev=True)
         self.w_a, self.w_a_std = self.param_extract('w_a', stdev=True)
-    
+
+        # Parse strand coverage and min/max elbo values from log file
         if log_file:
             self.log = OrderedDict()
             with open(log_file, 'r') as lf:
@@ -120,7 +121,13 @@ class FitParse:
                         else:
                             continue
                         self.log[gene_id].update({field: value})
+            
+            self.cov_pos = []
+            self.cov_neg = []
 
+            for g in self.genes:
+                self.cov_pos.append(self.log[g]['strand_cov'][0])
+                self.cov_neg.append(abs(self.log[g]['strand_cov'][1]))
 
 
     def param_extract(self, p, stdev=False):
