@@ -229,6 +229,14 @@ def main():
     bgn_file = config['FILES']['BEDGRAPH_NEG']
     reads_dict = dp.bedgraph_loader(bgp_file, bgn_file, annot_dict, pad_dict)
 
+    # Filter out genes with zero/low coverage
+    if config['DATA_PROC']['COV_THRESHOLDS']:
+        cov_thresh = config['DATA_PROC']['COV_THRESHOLDS']
+    else:
+        cov_thresh = (0, 0)
+    filtered = dp.cov_filter(reads_dict, annot_dict, thresholds=cov_thresh)
+    reads_dict, annot_dict, filter_log = filtered
+
     print(f"RD: {reads_dict.keys()}")
     # Combine annot_dict and reads_dict for parallelization input
     mpargs = {
@@ -277,6 +285,7 @@ def main():
     print(f"log file: {log_filename}")
 
     # Record results and log information
+    # annot format: (chrom, (start, stop, strand), gene_id)
     for annot, fitres in res_dict.items():
         res_str = fitres['res']
         print(f"RES LINE: {res_str}\n")
@@ -294,8 +303,12 @@ def main():
         except:
             print(f"Can't write log: {annot}")
         try:
+            # Record fitting error
             for line in err_str:
                 err_file.write(line)
+            # Record coverage filter error
+            if annot[2] in filter_log.keys():
+                err_file.write(filter_log[annot[2]])
         except:
             print(f"Can't write err: {annot}")
 
