@@ -169,7 +169,7 @@ def config_loader(config_file):
         'MODEL': {'ANTISENSE':None, 'BACKGROUND':None, 'FRACPRIORS':None}, 
         'PRIORS': {'mL':None, 'sL':None, 'tI':None, 'mT':None, 'sT':None,
             'mL_a':None, 'sL_a':None, 'tI_a':None, 'w':None}, 
-        'DATA_PROC': {'RANGE_SHIFT':None, 'PAD':None}, 
+        'DATA_PROC': {'RANGE_SHIFT':None, 'PAD':None, 'COV_THRESHOLDS':None}, 
         'FIT': {'ITERATIONS':None, 'LEARNING_RATE':None, 'METHOD':None,
             'OPTIMIZER':None, 'MEANFIELD':None, 'TOLERANCE':None}, 
         'RESULTS': {'SAMPLES':None, 'MEAN':None, 'MODE':None, 'MEDIAN': None, 
@@ -224,7 +224,8 @@ def config_loader(config_file):
             # DATA_PROC
             elif pname == 'RANGE_SHIFT':
                 config[category][pname] = bool_cast(pval)
-            elif pname == 'PAD':
+            elif (pname == 'PAD' or
+                pname == 'COV_THRESHOLDS'):
                 pval = pval.strip().split(',')
                 pval = [float_int_cast(i) for i in pval]
                 config[category][pname] = pval
@@ -479,7 +480,10 @@ def bglist_check(bglist, chromosome, begin, end, chr_order):
     '''
     Checks if <bglist> is upstream, overlapping or downstream of annot. Returns
      +1, 0, -1 respectively. Annotation given by <chromosome>, <begin>, and 
-    <end>.
+    <end>. Bedgraph line <bglist> is of the form [chr_id, initial, final, ...].
+    This function will return None if the bedgraph line chromsome ID or the 
+    annotation chromosome ID are not contained in the <chr_order> reference 
+    dictionary which contains the chromosome ordering.
     '''
     #chr_order = {
     #    'chr1':1, 'chr2':2, 'chr3':3, 'chr4':4, 'chr5':5, 'chr6':6, 'chr7':7, 
@@ -694,7 +698,7 @@ def bgreads(bg, current_bg_list, chromosome, begin, end, chr_order):
     for bgline in bg:
         bglist = bgline_cast(bgline)
         loc = bglist_check(bglist, chromosome, begin, end, chr_order)
-        # Upstream or invalid chr
+        # Upstream or invalid chromosome
         if loc == 1 or loc == None:
             continue
         # Overlap
@@ -789,6 +793,7 @@ def bedgraph_loader(bgp_file, bgn_file, annot_dict, pad_dict):
     read_dict : dict
         Dictionary containing the reads from the bedgraph file for each ID in 
         the annot_dict. The reads are returned as a Counter style dictionary.
+        Format: {'gene_id': (preads, nreads), ...}
     '''
     read_dict = {}
 
@@ -836,6 +841,82 @@ def bedgraph_loader(bgp_file, bgn_file, annot_dict, pad_dict):
                 read_dict[gene_id] = (preads, nreads)
 
     return read_dict
+
+
+# FILTERING ===================================================================
+
+def cov_filter(reads, annotations, thresholds=(0, 0)):
+    '''
+    This funciton is used to filter out genes with low or no coverage on the 
+    sense and/or anti-sense strands. The threshold values (sense, anti-sense) 
+    are compared to values of reads dict and then removed from it as well as 
+    the annotation dict.
+
+    Parameters
+    ----------
+    reads : dict
+        Dictionary containing read data from bedGraph files. Reads are in a
+        Counter-like dictionary {<base position> : <count>, ...}
+        Format: {'gene_id': (preads, nreads), ...}
+    
+    annots : dict
+        Dictionary continaing annotations for each gene to be fit.
+        Format: {'chr#': {(start, stop, strand): gene_id, ...}, ...}
+
+    thresholds : tuple
+        Sense and anti-sense strand coverage threshold for filter (# reads).
+
+    Returns
+    -------
+    reads_filtered : dict
+        Dictionary containing filtered reads, formatted same as input.
+
+    annots_filtered : dict
+        Dictionary containing filtered annotations, formatted same as input.
+
+    err_info : list
+        Information to be logged on which genes had been removed and why.
+    '''
+
+    # Extract strand info
+    strands = {gene_id: annot[2] for chrom_annots in annotations.values() 
+               for annot, gene_id in chrom_annots.items()}
+
+    remove_genes = set()
+    log_info = {}
+
+    for gene, strand in strands.items():
+
+        # Sense (map: strand +1 --> index 0 and -1 --> 1)
+        sense_cov = sum(reads[gene][round((1-strand)/2)].values())
+        # Anti-sense (map: strand +1 --> index 1 and -1 --> 0)
+        antisense_cov = sum(reads[gene][round((1+strand)/2)].values())
+    
+        if sense_cov <= thresholds[0] and antisense_cov > thresholds[1]:
+            remove_genes.add(gene)
+            log_str = f"Cov filter ({sense_cov}, {antisense_cov}):sense\n"
+            log_info[gene] = log_str
+
+        elif sense_cov > thresholds[0] and antisense_cov <= thresholds[1]:
+            remove_genes.add(gene)
+            log_str = f"Cov filter ({sense_cov}, {antisense_cov}):anti\n"
+            log_info[gene] = log_str
+
+        elif sense_cov <= thresholds[0] and antisense_cov <= thresholds[1]:
+            remove_genes.add(gene)
+            log_str = f"Cov filter ({sense_cov}, {antisense_cov}):sense,anti\n"
+            log_info[gene] = log_str
+
+        else:
+            continue
+
+    reads_filtered = {g: r for g, r in reads.items() if g not in remove_genes}
+    annots_filtered = {}
+    for chromosome, chrom_annots in annotations.items():
+        filt = {a: g for a, g in chrom_annots.items() if g not in remove_genes}
+        annots_filtered[chromosome] = filt
+
+    return reads_filtered, annots_filtered, log_info
 
 
 
