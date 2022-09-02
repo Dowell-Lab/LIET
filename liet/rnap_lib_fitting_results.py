@@ -375,11 +375,19 @@ def results_format(annot, post_stats, stat='mean', decimals=2):
     id = str(annot['gene_id'])
     fields = list([chrom, start, stop, strand, id])
 
+    # Hard coding output order of parameters
     params = ['mL', 'sL', 'tI', 'mT', 'sT', 'w', 'mL_a', 'sL_a', 'tI_a', 'w_a']
     fit_res = []
     for p in params:
-        
-        pvals = post_stats[p]
+
+        # Extract param val depending on joint/indep priors for antisense
+        if p in post_stats.keys():
+            pvals = post_stats[p]
+        elif p in ['mL_a', 'sL_a', 'tI_a']:
+            p_alt = p.split('_')[0]
+            pvals = post_stats[p_alt]
+        else:
+            raise ValueError(f'Parameter {p} should not be included in result')
 
         pval = np.around(pvals[stat], decimals=decimals)
         pstd = np.around(pvals['stdev'], decimals=decimals)
