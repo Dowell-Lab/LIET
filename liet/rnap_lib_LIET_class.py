@@ -353,7 +353,8 @@ class LIET:
             # Check for None type prior
             # (used if anti-sense not being fit, sL==sL_a, and/or tI==tI_a )
             elif prior_type == None:
-                if antisense == True and var_name not in ['sL_a', 'tI_a']:
+                if (antisense == True and 
+                    var_name not in ['mL_a', 'sL_a', 'tI_a']):
                     print(prior_type)
                     raise ValueError(
                         (f"'{var_name}' must be one of the following: "
