@@ -516,6 +516,11 @@ class LIET:
 
         # Define antisense-strand model (w/ or w/o bckgrnd or sep sL/tI priors)
         if antisense == True:
+            if self.priors['mL_a'] != None:
+                m_a = self._p['mL_a']
+            else:
+                m_a = self._p['mL']
+
             if self.priors['sL_a'] != None:
                 s_a = self._p['sL_a']
             else:
@@ -529,7 +534,7 @@ class LIET:
             if background == True and self.priors['w']['alpha_B'] != 0:
                 with self.model:
                     LI_a_pdf = pm.ExGaussian.dist(
-                        mu=self._p['mL_a'], 
+                        mu=m_a, 
                         sigma=s_a, 
                         nu=t_a
                     )
@@ -552,7 +557,7 @@ class LIET:
                 with self.model:
                     LIET_a_pdf = pm.ExGaussian(
                         'LIET_a_pdf',
-                        mu=self._p['mL_a'],
+                        mu=self.m_a,
                         sigma=s_a,
                         nu=t_a,
                         observed=self.data[antisense_reads]
