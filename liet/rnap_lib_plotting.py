@@ -208,10 +208,24 @@ def LIET_plot(
             mL, sL, tI, mT, sT, w = None, None, None, None, None, None
             
         if antisense:
-            mL_a = results['mL_a'][stat]
-            sL_a = results['sL_a'][stat]
-            tI_a = results['tI_a'][stat]
-            w_a = results['w_a'][stat]
+            # NOTE: I don't particularly like this handling. I should probably do this assigning further upstream (say in fr.posterior_stats())
+            # I didn't realize the handling her had changed from when I used to rely on .posterior_summary() function contained in LIET class
+            if 'mL_a' in results.keys():
+                mL_a = results['mL_a'][stat]
+            else:
+                mL_a = results['mL'][stat]
+            if 'sL_a' in results.keys():
+                sL_a = results['sL_a'][stat]
+            else:
+                sL_a = results['sL'][stat]
+            if 'tI_a' in results.keys():
+                tI_a = results['tI_a'][stat]
+            else:
+                tI_a = results['tI'][stat]
+            if 'w_a' in results.keys():
+                w_a = results['w_a'][stat]
+            else:
+                w_a = results['w'][stat]
             # Have to do this so that the weights arrays are length 4
             if len(w_a) == 1:
                 w_a.extend([0, 0, 0])
