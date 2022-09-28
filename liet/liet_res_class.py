@@ -112,12 +112,17 @@ class FitParse:
                         self.log[gene_id] = dict()
                     else:
                         field, value = line.strip().split(':')
-                        if field == 'strand_cov':
+                        if field == 'fit_range':
+                            value = value.strip('()').split(',')
+                            value = tuple(map(int, value))
+                        elif field == 'strand_cov':
                             value = value.strip('()').split(',')
                             value = tuple(map(int, value))
                         elif field == 'elbo_range':
                             value = value.strip('()').split(',')
                             value = tuple(map(float, value))
+                        elif field == 'fit_time_min':
+                            value = float(value)
                         else:
                             continue
                         self.log[gene_id].update({field: value})
