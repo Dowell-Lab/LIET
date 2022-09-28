@@ -603,6 +603,9 @@ def LIET_plot2(
     # Convert read dicts to list and concatenate
     data = [dp.reads_d2l(preads), dp.reads_d2l(nreads)]
 
+    # Shift data genomic coordinates to TSS
+    data = [[i-start for i in data[0]], [i-start for i in data[1]]]
+
     # Extract parameter values from FitParse object
     model_params = {p:v[0] for p, v in fit_parse.fits[gene_id].items()}
 
