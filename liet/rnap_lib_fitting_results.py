@@ -392,6 +392,15 @@ def results_format(annot, post_stats, stat='mean', decimals=2):
         pval = np.around(pvals[stat], decimals=decimals)
         pstd = np.around(pvals['stdev'], decimals=decimals)
 
+        # Enforce that weights sum to 1.00 (wB/wB_a the adjusted values)
+        # Rounding sometimes results in sum being off by 1e-<decimals>
+        if p == "w":
+            wb_update = np.around(1.0 - sum(pval[0:3]), decimals=decimals)
+            assert(abs(wb_update - pval[3]) <= 10**-decimals,
+                "WARNING: Weight issue! wB rounding is not within tolerance."
+            )
+            pval[3] = wb_update
+
         pstring = f"{p}={pval}:{pstd}"
         fit_res.append(pstring)
 
