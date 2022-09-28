@@ -507,7 +507,7 @@ def LIET_ax(
         data_n = data[1]
 
         # Horizontal inversion if data was initially shifted
-        data_n = ds.invert(data_n, 0)
+#        data_n = ds.invert(data_n, 0)
 
         bmin = min(min(data_p), min(data_n))
         bmax = max(max(data_p), max(data_n))
