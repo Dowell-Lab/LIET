@@ -606,6 +606,13 @@ def LIET_plot2(
     # Extract parameter values from FitParse object
     model_params = {p:v[0] for p, v in fit_parse.fits[gene_id].items()}
 
+    # Enforce that weights sum to 1.0 by adjusting wB
+    wb_update = np.around(1.0 - sum(model_params['w'][0:3]))
+    assert(abs(wb_update - model_params['w'][3]) <= 1e-2, 
+        "WARNING: Weight rounding issue! Check wB update."
+    )
+    model_params['w'] = (*model_params['w'][0:3], wb_update)
+
     print(f"STRAND: {strand}")
     print(f"PARAMS: {model_params.items()}")
     # Generate plot on Axes object ax
