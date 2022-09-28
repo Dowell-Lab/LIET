@@ -606,6 +606,8 @@ def LIET_plot2(
     # Extract parameter values from FitParse object
     model_params = {p:v[0] for p, v in fit_parse.fits[gene_id].items()}
 
+    print(f"STRAND: {strand}")
+    print(f"PARAMS: {model_params.items()}")
     # Generate plot on Axes object ax
     LIET_ax(
         ax,
