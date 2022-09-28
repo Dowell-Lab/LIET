@@ -503,8 +503,8 @@ def LIET_ax(
 
     # Plotting the read data
     if data:
-        data_p = data['pos_reads']
-        data_n = data['neg_reads']
+        data_p = data[0]
+        data_n = data[1]
 
         # Horizontal inversion if data was initially shifted
         data_n = ds.invert(data_n, 0)
@@ -608,9 +608,7 @@ def LIET_plot2(
 
     # Enforce that weights sum to 1.0 by adjusting wB
     wb_update = np.around(1.0 - sum(model_params['w'][0:3]), decimals=2)
-    assert(abs(wb_update - model_params['w'][3]) <= 1e-2, 
-        "WARNING: Weight rounding issue! Check wB update."
-    )
+
     model_params['w'] = (*model_params['w'][0:3], wb_update)
 
     print(f"STRAND: {strand}")
