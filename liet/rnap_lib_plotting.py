@@ -601,7 +601,7 @@ def LIET_plot2(
         _, nreads = dp.bgreads(*bgn_args)
 
     # Convert read dicts to list and concatenate
-    data = [dp.reads_d2l(preads), dp.reads_d2l[nreads]]
+    data = [dp.reads_d2l(preads), dp.reads_d2l(nreads)]
 
     # Extract parameter values from FitParse object
     model_params = {p:v[0] for p, v in fit_parse.fits[gene_id].items()}
