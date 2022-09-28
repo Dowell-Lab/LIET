@@ -584,9 +584,8 @@ def LIET_plot2(
             bgp, 
             current_bgpl, 
             chromosome, 
-            fit_range,
-            start,
-            stop,
+            fit_range[0] + start,
+            fit_range[1] + start,
             chr_order
         ]
         _, preads = dp.bgreads(*bgp_args)
@@ -595,8 +594,8 @@ def LIET_plot2(
             bgn, 
             current_bgnl, 
             chromosome, 
-            start, 
-            stop,
+            fit_range[0] + start,
+            fit_range[1] + start,
             chr_order
         ]
         _, nreads = dp.bgreads(*bgn_args)
@@ -610,7 +609,7 @@ def LIET_plot2(
     # Generate plot on Axes object ax
     LIET_ax(
         ax,
-        *model_params,
+        **model_params,
         strand = strand,
         xvals = xvals,
         data = data,
