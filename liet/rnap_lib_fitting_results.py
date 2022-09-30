@@ -135,7 +135,7 @@ def vi_fit(
         fit_dict['callbacks'] = callbacks
 
     # Run fit
-    approx = vi.fit(iterations, progressbar=True, **fit_dict)
+    approx = vi.fit(iterations, progressbar=False, **fit_dict)
 
     # Add inference, approx, and tracker objects to output dict
     fit['vi'] = vi
@@ -366,7 +366,7 @@ def results_format(annot, post_stats, stat='mean', decimals=2):
     -------
     res : str
         Formatted string containing the gene ID and fit values for each 
-        parameter. 
+        parameter.
     '''
     chrom = str(annot['chrom'])
     start = str(annot['start'])
@@ -392,7 +392,7 @@ def results_format(annot, post_stats, stat='mean', decimals=2):
         pval = np.around(pvals[stat], decimals=decimals)
         pstd = np.around(pvals['stdev'], decimals=decimals)
 
-        # Enforce that weights sum to 1.00 (wB/wB_a the adjusted values)
+        # Enforce that weights sum to 1.00 (by adjusting the background wB)
         # Rounding sometimes results in sum being off by 1e-<decimals>
         if p == "w":
             wb_update = np.around(1.0 - sum(pval[0:3]), decimals=decimals)
