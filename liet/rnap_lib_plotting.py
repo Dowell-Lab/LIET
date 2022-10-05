@@ -545,74 +545,7 @@ def LIET_ax(
         ax.bar(loc, height, width, alpha=0.2, align='edge', color=col)
 
 
-def results_loader(gene_ids, config=None, result=None, log=None):
-    '''
-    This function uses much of the input data processing functionality to read 
-    in LIET fitting results (from the .liet and .liet.log files) as well as 
-    the read data, for the purposes of plotting the model fit. Uses the 
-    following functions: config_loader(), bedgraph_loader(), FitParse, ...
-    '''
-    # Parse config and fit results files
-    config_parse = dp.config_loader(config)
-    fit_parse = FitParse(result, log_file=log)
 
-    # Only need the input files from config
-    bgp_file = config_parse['FILES']['BEDGRAPH_POS']
-    bgn_file = config_parse['FILES']['BEDGRAPH_NEG']
-
-    # Determine chromosome string order
-    chr_order = dp.chrom_order_reader(bgp_file, bgn_file)
-
-    # Check all genes in gene_ids are contained in the fit result
-    for gid in gene_ids:
-        assert(gid in fit_parse.genes, f"Gene {gid} not in fit result.")
-
-    # Build annotation dict for input into bedgraph_loader(). Does not assume 
-    # FitParse.annotations is ordered by chrom or start position. Initialized 
-    # from chr_order, checking against set of chromosomes in FitParse object.
-    res_chr_set_tmp = set(np.array(list(fit_parse.annotations.values()))[:,0])
-    annot_dict = OrderedDict([
-        (chrom, {}) for chrom in chr_order.keys() 
-        if chrom in res_chr_set_tmp
-    ])
-    for gid, annot in fit_parse.annotations.items():
-        if gid in gene_ids:
-            annot_dict[annot[0]].update({annot[1:]: gid})  #(start, stop, strd)
-
-    # Compute padding dict from log info (circular, for the sake of reusing
-    # bedgraph_loader() code)
-    pad_dict = {}
-    xvals = {}
-    for gid in gene_ids:
-        begin, end = fit_parse.log[gid]['fit_range']
-        _, start, stop, _ = fit_parse.annotations[gid]
-        gene_len = abs(stop - start)
-        pad_dict[gid] = (abs(begin), abs(end - gene_len))
-
-    # Reads, format: {'gene_id': (preads, nreads), ...}
-    reads_dict = dp.bedgraph_loader(
-        bgp_file, 
-        bgn_file, 
-        annot_dict, 
-        pad_dict, 
-        chr_order=chr_order)
-
-    # Format and consolidate all the results for return
-    results = OrderedDict()
-
-    for gid in gene_ids:
-        xvals = np.array(range(*fit_parse.log[gid]['fit_range']))
-        strand = fit_parse.annotations[gid][3]
-        start = fit_parse.annotations[gid][1]
-        preads = [i-start for i in dp.reads_d2l(reads_dict[gid][0])]
-        nreads = [i-start for i in dp.reads_d2l(reads_dict[gid][1])]
-        model_params = {p:v[0] for p, v in fit_parse.fits[gid].items()}
-        wb_update = np.around(1.0 - sum(model_params['w'][0:3]), decimals=2)
-        model_params['w'] = (*model_params['w'][0:3], wb_update)
-
-        results[gid] = (xvals, preads, nreads, strand, model_params)
-
-    return results
 
 
 def LIET_res_load(
@@ -686,30 +619,30 @@ def LIET_res_load(
     return xvals, data, model_params, strand
 
 
-def LIET_plot2(
-    ax,
-    gene_id,
-    config=None,
-    result=None,
-    log=None
-):
-    '''
-    This function generates a LIET model fit plot in a matplotlib Axes object, 
-    for a specified gene ID. It loads data and fit parameters from config, 
-    bedGraph, and LIET fit results output file and then calls the LIET_ax() 
-    function to perform the actual plotting.
-    '''
 
-    xvals, data, model_params, strand = LIET_res_load(gene_id, config=config, result=result, log=log)
+# def LIET_plot2(
+#     ax_gid_pairs,
+#     config=None,
+#     result=None,
+#     log=None
+# ):
+#     '''
+#     This function generates a LIET model fit plot in a matplotlib Axes object, 
+#     for a specified gene ID. It loads data and fit parameters from config, 
+#     bedGraph, and LIET fit results output file and then calls the LIET_ax() 
+#     function to perform the actual plotting.
+#     '''
 
-    print(f"STRAND: {strand}")
-    print(f"PARAMS: {model_params.items()}")
-    # Generate plot on Axes object ax
-    LIET_ax(
-        ax,
-        **model_params,
-        strand = strand,
-        xvals = xvals,
-        data = data,
-        nbins = 1000,
-    )
+#     results = LIET_res_load(gene_id, config=config, result=result, log=log)
+
+#     print(f"STRAND: {strand}")
+#     print(f"PARAMS: {model_params.items()}")
+#     # Generate plot on Axes object ax
+#     LIET_ax(
+#         ax,
+#         **model_params,
+#         strand = strand,
+#         xvals = xvals,
+#         data = data,
+#         nbins = 1000,
+#     )
