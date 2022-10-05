@@ -805,7 +805,7 @@ def bedgraph_loader(bgp_file, bgn_file, annot_dict, pad_dict, chr_order=None):
 
     # Determine chromosome string order if none provided
     if chr_order == None:
-        order = chrom_order_reader(bgp_file, bgn_file)
+        chr_order = chrom_order_reader(bgp_file, bgn_file)
 
     with open(bgp_file, 'r') as bgp, open(bgn_file, 'r') as bgn:
         current_bgpl = ['chr1', 0, 0, 0]    # Initialize pos strand bg line
