@@ -562,6 +562,8 @@ def results_loader(gene_ids, config=None, result=None, log=None):
         pad_dict[gid] = (abs(begin), abs(end - gene_len))
 
     # Reads data. Format: {'gene_id': (preads, nreads), ...}
+    print(f"ANNOTS: {annot_dict}")
+    print(f"PADS: {pad_dict}")
     reads_dict = dp.bedgraph_loader(
         bgp_file, 
         bgn_file, 
