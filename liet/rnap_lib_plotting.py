@@ -508,10 +508,9 @@ def LIET_ax(
     # Plotting the read data
     if data:
         data_p = data[0]
+        print(f"P DATA RANGE: {min(data_n)}, {max(data_n)}")
         data_n = data[1]
-        print(f"DATA RANGE (preflip): {min(data_n)}, {max(data_n)}")
-        data_n = ds.invert(data_n, 0)
-        print(f"DATA RANGE (postflip): {min(data_n)}, {max(data_n)}")
+        print(f"N DATA RANGE: {min(data_n)}, {max(data_n)}")
 
         # Horizontal inversion if data was initially shifted
 #        data_n = ds.invert(data_n, 0)

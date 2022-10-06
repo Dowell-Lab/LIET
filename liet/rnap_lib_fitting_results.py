@@ -573,12 +573,18 @@ def results_loader(gene_ids, config=None, result=None, log=None):
     # Format and consolidate all the results for return
     results = OrderedDict()
     for gid in gene_ids:
+        print(f"GENE {gid}")
         xvals = np.array(range(*fit_parse.log[gid]['fit_range']))
+        print(f"x range: {min(xvals)}, {max(xvals)}")
         strand = fit_parse.annotations[gid][3]
         start = fit_parse.annotations[gid][1]
+        print(f"START POS: {start}")
         preads = [i-start for i in dp.reads_d2l(reads_dict[gid][0])]
+        print(f"preads range: {min(preads)}, {max(preads)}")
         nreads = [i-start for i in dp.reads_d2l(reads_dict[gid][1])]
+        print(f"nreads range: {min(nreads)}, {max(nreads)}")
         model_params = {p:v[0] for p, v in fit_parse.fits[gid].items()}
+        print(model_params)
         # Round w_b and extend w_a
         wb_update = np.around(1.0 - sum(model_params['w'][0:3]), decimals=2)
         model_params['w'] = [*model_params['w'][0:3], wb_update]
