@@ -580,9 +580,9 @@ def results_loader(gene_ids, config=None, result=None, log=None):
         print(f"x range: {min(xvals)}, {max(xvals)}")
         strand = fit_parse.annotations[gid][3]
         if strand == 1:
-            start = fit_parse.annotations[gid][2]
-        else:
             start = fit_parse.annotations[gid][1]
+        else:
+            start = fit_parse.annotations[gid][2]
         print(f"START POS: {start}")
         preads = [i-start for i in dp.reads_d2l(reads_dict[gid][0])]
         print(f"preads range: {min(preads)}, {max(preads)}")
