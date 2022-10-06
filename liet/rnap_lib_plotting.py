@@ -465,6 +465,7 @@ def LIET_ax(
 
     else:
         # If gene on neg strand, must invert sense strand positions
+        print(f"ML, MT (preflip): {mL}, {mT}")
         mL = ds.invert(mL, 0)
         mT = ds.invert(mT, 0)
 
@@ -486,6 +487,7 @@ def LIET_ax(
             rvs = False, 
             pdf = True
         )
+        print(f"ML, MT, ML_A: {mL}, {mT}, {mL_a}")
 
     # Generate pdfs for fitting results
     pdf_p, pdf_n = ds.gene_model(xvals, **plot_params)
@@ -543,6 +545,11 @@ def LIET_ax(
         loc = hist[1][:-1]
         width = hist[1][1] - hist[1][0]
         ax.bar(loc, height, width, alpha=0.2, align='edge', color=col)
+
+    # Draw in annotations
+
+
+    # Write labels
 
 
 
