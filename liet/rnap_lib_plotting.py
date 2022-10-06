@@ -508,7 +508,7 @@ def LIET_ax(
     # Plotting the read data
     if data:
         data_p = data[0]
-        print(f"P DATA RANGE: {min(data_n)}, {max(data_n)}")
+        print(f"P DATA RANGE: {min(data_p)}, {max(data_p)}")
         data_n = data[1]
         print(f"N DATA RANGE: {min(data_n)}, {max(data_n)}")
 
