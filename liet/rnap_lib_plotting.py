@@ -490,6 +490,7 @@ def LIET_ax(
         print(f"ML, MT, ML_A: {mL}, {mT}, {mL_a}")
 
     # Generate pdfs for fitting results
+    print(f"xvals range: {min(xvals)}, {max(xvals)}")
     pdf_p, pdf_n = ds.gene_model(xvals, **plot_params)
 
     # Plot pdfs of gene dependant on <sense> and <antisense>
@@ -508,6 +509,9 @@ def LIET_ax(
     if data:
         data_p = data[0]
         data_n = data[1]
+        print(f"DATA RANGE (preflip): {min(data_n)}, {max(data_n)}")
+        data_n = ds.invert(data_n, 0)
+        print(f"DATA RANGE (postflip): {min(data_n)}, {max(data_n)}")
 
         # Horizontal inversion if data was initially shifted
 #        data_n = ds.invert(data_n, 0)
