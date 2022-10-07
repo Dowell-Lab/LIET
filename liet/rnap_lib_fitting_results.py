@@ -563,8 +563,8 @@ def results_loader(gene_ids, config=None, result=None, log=None):
         pad_dict[gid] = (abs(begin), abs(end - gene_len))
 
     # Reads data. Format: {'gene_id': (preads, nreads), ...}
-    print(f"ANNOTS: {annot_dict}")
-    print(f"PADS: {pad_dict}")
+#    print(f"ANNOTS: {annot_dict}")
+#    print(f"PADS: {pad_dict}")
     reads_dict = dp.bedgraph_loader(
         bgp_file, 
         bgn_file, 
@@ -576,29 +576,31 @@ def results_loader(gene_ids, config=None, result=None, log=None):
     # Format and consolidate all the results for return
     results = OrderedDict()
     for gid in gene_ids:
-        print(f"GENE {gid}")
         xvals = np.array(range(*fit_parse.log[gid]['fit_range']))
-
         strand = fit_parse.annotations[gid][3]
         if strand == 1:
             start = fit_parse.annotations[gid][1]
         else:
             xvals = invert(xvals, 0)
             start = fit_parse.annotations[gid][2]
-        print(f"x range: {min(xvals)}, {max(xvals)}")
-        print(f"START POS: {start}")
+
         preads = [i-start for i in dp.reads_d2l(reads_dict[gid][0])]
-        print(f"preads range: {min(preads)}, {max(preads)}")
         nreads = [i-start for i in dp.reads_d2l(reads_dict[gid][1])]
-        print(f"nreads range: {min(nreads)}, {max(nreads)}")
         model_params = {p:v[0] for p, v in fit_parse.fits[gid].items()}
-        print(model_params)
+
         # Round w_b and extend w_a
         wb_update = np.around(1.0 - sum(model_params['w'][0:3]), decimals=2)
         model_params['w'] = [*model_params['w'][0:3], wb_update]
         if len(model_params['w_a']) == 2:
             w_a = model_params['w_a']
             model_params['w_a'] = [w_a[0], 0, 0, w_a[1]]
+
+#        print(f"GENE {gid}")
+#        print(f"x range: {min(xvals)}, {max(xvals)}")
+#        print(f"START POS: {start}")
+#        print(f"preads range: {min(preads)}, {max(preads)}")
+#        print(f"nreads range: {min(nreads)}, {max(nreads)}")
+#        print(model_params)
 
         results[gid] = (xvals, preads, nreads, strand, model_params)
 
