@@ -5,6 +5,7 @@ import time
 from collections import OrderedDict
 
 import rnap_lib_data_proc as dp
+from rnap_lib_data_sim import invert
 from liet_res_class import FitParse
 
 
@@ -577,12 +578,14 @@ def results_loader(gene_ids, config=None, result=None, log=None):
     for gid in gene_ids:
         print(f"GENE {gid}")
         xvals = np.array(range(*fit_parse.log[gid]['fit_range']))
-        print(f"x range: {min(xvals)}, {max(xvals)}")
+
         strand = fit_parse.annotations[gid][3]
         if strand == 1:
             start = fit_parse.annotations[gid][1]
         else:
+            xvals = invert(xvals, 0)
             start = fit_parse.annotations[gid][2]
+        print(f"x range: {min(xvals)}, {max(xvals)}")
         print(f"START POS: {start}")
         preads = [i-start for i in dp.reads_d2l(reads_dict[gid][0])]
         print(f"preads range: {min(preads)}, {max(preads)}")
