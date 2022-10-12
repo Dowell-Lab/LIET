@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 
 import rnap_lib_data_sim as ds
 import rnap_lib_data_proc as dp
+from rnap_lib_fitting_results import pdf_generator, hist_generator
 from liet_res_class import FitParse
 
 #==============================================================================
@@ -428,71 +429,86 @@ def LIET_ax(
     -------
     None
     '''
-    # Scaling method for relative scaling of strands
-    try:
-        Np = len(data['pos_reads'])
-        Nn = len(data['neg_reads'])
+    # # Scaling method for relative scaling of strands
+    # try:
+    #     Np = len(data['pos_reads'])
+    #     Nn = len(data['neg_reads'])
 
-        frac_p = Np / (Np + Nn)
-        frac_n = Nn / (Np + Nn)
-    except:
-        frac_p = 1.0
-        frac_n = 1.0
+    #     frac_p = Np / (Np + Nn)
+    #     frac_n = Nn / (Np + Nn)
+    # except:
+    #     frac_p = 1.0
+    #     frac_n = 1.0
 
-    if strand == '+' or strand == 1:
+    # if strand == '+' or strand == 1:
         
-        # If gene on pos strand, must invert antisense strand position
-        mL_a = ds.invert(mL_a, 0)
+    #     # If gene on pos strand, must invert antisense strand position
+    #     mL_a = ds.invert(mL_a, 0)
 
-        plot_params = dict(
-            mu0_p = mL, 
-            sig0_p = sL, 
-            tau0_p = tI, 
-            mu1_p = mT, 
-            sig1_p = sT,
-            mu0_n = mL_a, 
-            sig0_n = sL_a, 
-            tau0_n = tI_a, 
-            mu1_n = None, 
-            sig1_n = None,
-            w_p = w,
-            w_n = w_a,
-            N_p = 1000,
-            N_n = 1000,
-            rvs = False, 
-            pdf = True
-        )
+    #     plot_params = dict(
+    #         mu0_p = mL, 
+    #         sig0_p = sL, 
+    #         tau0_p = tI, 
+    #         mu1_p = mT, 
+    #         sig1_p = sT,
+    #         mu0_n = mL_a, 
+    #         sig0_n = sL_a, 
+    #         tau0_n = tI_a, 
+    #         mu1_n = None, 
+    #         sig1_n = None,
+    #         w_p = w,
+    #         w_n = w_a,
+    #         N_p = 1000,
+    #         N_n = 1000,
+    #         rvs = False, 
+    #         pdf = True
+    #     )
 
-    else:
-        # If gene on neg strand, must invert sense strand positions
-        print(f"ML, MT (preflip): {mL}, {mT}")
-        mL = ds.invert(mL, 0)
-        mT = ds.invert(mT, 0)
+    # else:
+    #     # If gene on neg strand, must invert sense strand positions
+    #     print(f"ML, MT (preflip): {mL}, {mT}")
+    #     mL = ds.invert(mL, 0)
+    #     mT = ds.invert(mT, 0)
 
-        plot_params = dict(
-            mu0_p = mL_a, 
-            sig0_p = sL_a, 
-            tau0_p = tI_a, 
-            mu1_p = None, 
-            sig1_p = None,
-            mu0_n = mL, 
-            sig0_n = sL, 
-            tau0_n = tI, 
-            mu1_n = mT, 
-            sig1_n = sT,
-            w_p = w_a,
-            w_n = w,
-            N_p = 1000,
-            N_n = 1000,
-            rvs = False, 
-            pdf = True
-        )
-        print(f"ML, MT, ML_A: {mL}, {mT}, {mL_a}")
+    #     plot_params = dict(
+    #         mu0_p = mL_a, 
+    #         sig0_p = sL_a, 
+    #         tau0_p = tI_a, 
+    #         mu1_p = None, 
+    #         sig1_p = None,
+    #         mu0_n = mL, 
+    #         sig0_n = sL, 
+    #         tau0_n = tI, 
+    #         mu1_n = mT, 
+    #         sig1_n = sT,
+    #         w_p = w_a,
+    #         w_n = w,
+    #         N_p = 1000,
+    #         N_n = 1000,
+    #         rvs = False, 
+    #         pdf = True
+    #     )
+    #     print(f"ML, MT, ML_A: {mL}, {mT}, {mL_a}")
 
-    # Generate pdfs for fitting results
-    print(f"xvals range: {min(xvals)}, {max(xvals)}")
-    pdf_p, pdf_n = ds.gene_model(xvals, **plot_params)
+    # # Generate pdfs for fitting results
+    # print(f"xvals range: {min(xvals)}, {max(xvals)}")
+    # pdf_p, pdf_n = ds.gene_model(xvals, **plot_params)
 
+    pdf_p, pdf_n, frac_p, frac_n = pdf_generator(
+        mL = mL,
+        sL = sL,
+        tI = tI,
+        mT = mT,
+        sT = sT,
+        w = w,
+        mL_a = mL_a,
+        sL_a = sL_a,
+        tI_a = tI_a,
+        w_a = w_a,
+        strand = strand,
+        xvals = xvals,
+        data = data
+    )
     # Plot pdfs of gene dependant on <sense> and <antisense>
     if strand == '+' or strand == 1:
         # Sense
@@ -507,47 +523,63 @@ def LIET_ax(
 
     # Plotting the read data
     if data:
-        data_p = data[0]
-        print(f"P DATA RANGE: {min(data_p)}, {max(data_p)}")
-        data_n = data[1]
-        print(f"N DATA RANGE: {min(data_n)}, {max(data_n)}")
+        hist_p, hist_n, height_p, height_n = hist_generator(
+            data, 
+            (frac_p, frac_n), 
+            nbins=nbins
+        )
+        # Plot positive strand histogram (bar locations and widths)
+        locs_p = hist_p[1][:-1]
+        width_p = hist_p[1][1] - hist_p[1][0]
+        ax.bar(locs_p, height_p, width_p, alpha=0.2, align='edge', color='C0')
 
-        # Horizontal inversion if data was initially shifted
-#        data_n = ds.invert(data_n, 0)
+        # Plot negative strand histogram (bar locations and widths)
+        locs_n = hist_n[1][:-1]
+        width_n = hist_n[1][1] - hist_n[1][0]
+        ax.bar(locs_n, height_n, width_n, alpha=0.2, align='edge', color='C3')
 
-        bmin = min(min(data_p), min(data_n))
-        bmax = max(max(data_p), max(data_n))
-        if nbins == "auto":
-            bins = "auto"
-        else:
-            bins = np.linspace(bmin, bmax, nbins)
 
-        # Make negative histogram for neg strand data, depending on annot
-        if strand == '+' or strand == 1:
-            hist = np.histogram(data_p, bins=bins, density=True)
-            height = +hist[0] * frac_p
-            col = 'C0'
-        else:
-            hist = np.histogram(data_n, bins=bins, density=True)
-            height = -hist[0] * frac_n
-            col = 'C3'
+#         data_p = data[0]
+#         print(f"P DATA RANGE: {min(data_p)}, {max(data_p)}")
+#         data_n = data[1]
+#         print(f"N DATA RANGE: {min(data_n)}, {max(data_n)}")
 
-        loc = hist[1][:-1]
-        width = hist[1][1] - hist[1][0]
-        ax.bar(loc, height, width, alpha=0.2, align='edge', color=col)
+#         # Horizontal inversion if data was initially shifted
+# #        data_n = ds.invert(data_n, 0)
 
-        if strand == '+' or strand == 1:
-            hist = np.histogram(data_n, bins=bins, density=True)
-            height = -hist[0] * frac_n
-            col = 'C3'
-        else:
-            hist = np.histogram(data_p, bins=bins, density=True)
-            height = +hist[0] * frac_p
-            col = 'C0'
+#         bmin = min(min(data_p), min(data_n))
+#         bmax = max(max(data_p), max(data_n))
+#         if nbins == "auto":
+#             bins = "auto"
+#         else:
+#             bins = np.linspace(bmin, bmax, nbins)
 
-        loc = hist[1][:-1]
-        width = hist[1][1] - hist[1][0]
-        ax.bar(loc, height, width, alpha=0.2, align='edge', color=col)
+#         # Make negative histogram for neg strand data, depending on annot
+#         if strand == '+' or strand == 1:
+#             hist = np.histogram(data_p, bins=bins, density=True)
+#             height = +hist[0] * frac_p
+#             col = 'C0'
+#         else:
+#             hist = np.histogram(data_n, bins=bins, density=True)
+#             height = -hist[0] * frac_n
+#             col = 'C3'
+
+#         loc = hist[1][:-1]
+#         width = hist[1][1] - hist[1][0]
+#         ax.bar(loc, height, width, alpha=0.2, align='edge', color=col)
+
+#         if strand == '+' or strand == 1:
+#             hist = np.histogram(data_n, bins=bins, density=True)
+#             height = -hist[0] * frac_n
+#             col = 'C3'
+#         else:
+#             hist = np.histogram(data_p, bins=bins, density=True)
+#             height = +hist[0] * frac_p
+#             col = 'C0'
+
+#         loc = hist[1][:-1]
+#         width = hist[1][1] - hist[1][0]
+#         ax.bar(loc, height, width, alpha=0.2, align='edge', color=col)
 
     # Draw in annotations
 
