@@ -5,7 +5,7 @@ import time
 from collections import OrderedDict
 
 import rnap_lib_data_proc as dp
-from rnap_lib_data_sim import invert
+from rnap_lib_data_sim import invert, gene_model
 from liet_res_class import FitParse
 
 
@@ -605,3 +605,143 @@ def results_loader(gene_ids, config=None, result=None, log=None):
         results[gid] = (xvals, preads, nreads, strand, model_params)
 
     return results
+
+
+def pdf_generator(
+    mL = None,
+    sL = None,
+    tI = None,
+    mT = None,
+    sT = None,
+    w = None,
+    mL_a = None,
+    sL_a = None,
+    tI_a = None,
+    w_a = None,
+    strand = None,
+    xvals = None,
+    data = None
+):
+    '''
+    This function is used in LIET_ax() in plotting library for generating the 
+    model pdf's from the set of model parameters. Meant to be used downstream 
+    of results_loader() and calls gene_model() function from data sim lib. 
+    '''
+    # Scaling method for relative scaling of strands
+    try:
+        Np = len(data[0])
+        Nn = len(data[1])
+
+        frac_p = Np / (Np + Nn)
+        frac_n = Nn / (Np + Nn)
+    except:
+        print("WARNING: Using unity scaling for both strands. No strand bias.")
+        frac_p = 1.0
+        frac_n = 1.0
+
+    if strand == '+' or strand == 1:
+        
+        # If gene on pos strand, must invert antisense strand position
+        mL_a = invert(mL_a, 0)
+
+        plot_params = dict(
+            mu0_p = mL, 
+            sig0_p = sL, 
+            tau0_p = tI, 
+            mu1_p = mT, 
+            sig1_p = sT,
+            mu0_n = mL_a, 
+            sig0_n = sL_a, 
+            tau0_n = tI_a, 
+            mu1_n = None, 
+            sig1_n = None,
+            w_p = w,
+            w_n = w_a,
+            N_p = 1000,
+            N_n = 1000,
+            rvs = False, 
+            pdf = True
+        )
+
+    else:
+        # If gene on neg strand, must invert sense strand positions
+        print(f"ML, MT (preflip): {mL}, {mT}")
+        mL = invert(mL, 0)
+        mT = invert(mT, 0)
+
+        plot_params = dict(
+            mu0_p = mL_a, 
+            sig0_p = sL_a, 
+            tau0_p = tI_a, 
+            mu1_p = None, 
+            sig1_p = None,
+            mu0_n = mL, 
+            sig0_n = sL, 
+            tau0_n = tI, 
+            mu1_n = mT, 
+            sig1_n = sT,
+            w_p = w_a,
+            w_n = w,
+            N_p = 1000,
+            N_n = 1000,
+            rvs = False, 
+            pdf = True
+        )
+        print(f"ML, MT, ML_A: {mL}, {mT}, {mL_a}")
+
+    # Generate pdfs for fitting results
+    print(f"xvals range: {min(xvals)}, {max(xvals)}")
+    pdf_p, pdf_n = gene_model(xvals, **plot_params)
+
+    return pdf_p, pdf_n, frac_p, frac_n
+
+
+def hist_generator(
+    data,
+    fractions,
+    nbins = 'auto',
+):
+    '''
+    Generates historgram and scaled heights (including signed orientation) for 
+    both strands of data. Fractions tuple is used to scale the data on each 
+    strand according to the strand bias. Intended for use with pdf_generator() 
+    in LIET_ax() function for creating data and model plots.
+    '''
+    data_p, data_n = data
+    frac_p, frac_n = fractions
+    print(f"P DATA RANGE: {min(data_p)}, {max(data_p)}")
+    print(f"N DATA RANGE: {min(data_n)}, {max(data_n)}")
+
+    bmin = min(min(data_p), min(data_n))
+    bmax = max(max(data_p), max(data_n))
+    if nbins == "auto":
+        bins = "auto"
+    else:
+        bins = np.linspace(bmin, bmax, nbins)
+
+    # Make positive oriented histogram for postive strand
+    hist_p = np.histogram(data_p, bins=bins, density=True)
+    height_p = +hist_p[0] * frac_p
+
+    # Make negative oriented histogram for negative strand
+    hist_n = np.histogram(data_n, bins=bins, density=True)
+    height_n = -hist_n[0] * frac_n
+
+    return hist_p, hist_n, height_p, height_n
+
+    # loc = hist[1][:-1]
+    # width = hist[1][1] - hist[1][0]
+    # ax.bar(loc, height, width, alpha=0.2, align='edge', color=col)
+
+    # if strand == '+' or strand == 1:
+    #     hist = np.histogram(data_n, bins=bins, density=True)
+    #     height = -hist[0] * frac_n
+    #     col = 'C3'
+    # else:
+    #     hist = np.histogram(data_p, bins=bins, density=True)
+    #     height = +hist[0] * frac_p
+    #     col = 'C0'
+
+    # loc = hist[1][:-1]
+    # width = hist[1][1] - hist[1][0]
+    # ax.bar(loc, height, width, alpha=0.2, align='edge', color=col)
