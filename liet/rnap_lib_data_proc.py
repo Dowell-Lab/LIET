@@ -531,10 +531,11 @@ def add_bg_dict(bglist, begin, end, reads_dict):
     '''
     ch, i, f, ct = bglist
     
-    overlap_region = [ch, max(i, begin), min(f, end), ct]
+    overlap_region = [ch, max(i, begin), min(f, end), abs(ct)]
     reads = bg2d(overlap_region)
     
-    if ct > 0:
+    # Absolute value accounts for neg-strand BG files with neg count values
+    if abs(ct) > 0:
         reads_dict.update(reads)
 
 
