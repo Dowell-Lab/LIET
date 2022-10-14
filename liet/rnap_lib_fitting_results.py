@@ -33,6 +33,7 @@ def vi_fit(
     iterations=50000,
     tolerance=None,
     param_tracker=False,
+    prog_bar=False
 ):
     '''
     Function that performs fitting using the VI framework. Returns inference 
@@ -141,7 +142,7 @@ def vi_fit(
         fit_dict['callbacks'] = callbacks
 
     # Run fit
-    approx = vi.fit(iterations, progressbar=False, **fit_dict)
+    approx = vi.fit(iterations, progressbar=prog_bar, **fit_dict)
 
     # Add inference, approx, and tracker objects to output dict
     fit['vi'] = vi
