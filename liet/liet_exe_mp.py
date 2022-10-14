@@ -85,6 +85,8 @@ def fit_routine(fit_instance, config, pad_dict):
         else:
             tss = start
             tcs = stop
+        # NOTE: prior_config will acount for gene length in mT offset for 
+        # RANGE_SHIFT == True.
         priors = dp.prior_config(config['PRIORS'], tss, tcs)
         liet.set_priors(**priors)
     except:
