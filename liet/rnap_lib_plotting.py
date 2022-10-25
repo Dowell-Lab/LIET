@@ -1,8 +1,12 @@
 import numpy as np
+from collections import OrderedDict
 
 import matplotlib.pyplot as plt
 
 import rnap_lib_data_sim as ds
+import rnap_lib_data_proc as dp
+from rnap_lib_fitting_results import pdf_generator, hist_generator
+from liet_res_class import FitParse
 
 #==============================================================================
 
@@ -100,7 +104,6 @@ def convergence_plot(
     return fig
 
 
-
 #==============================================================================
 
 def LIET_plot(
@@ -114,12 +117,12 @@ def LIET_plot(
         fig_size=(10, 7),
         xlim=None,
         ylim=None,
-        save=None,
+        save=False,
         dpi=600):
     '''
-    Plot the model pdf that results from fitting. `stat` specifies which 
+    Plot the model pdf that results from fitting. 'stat' specifies which 
     value should be used for the parameter value. Option is either 'mean' 
-    or 'mode'.
+    or 'mode'. Requires input of fully populated LIET class instance.
 
     Parameters
     ----------
@@ -208,10 +211,24 @@ def LIET_plot(
             mL, sL, tI, mT, sT, w = None, None, None, None, None, None
             
         if antisense:
-            mL_a = results['mL_a'][stat]
-            sL_a = results['sL_a'][stat]
-            tI_a = results['tI_a'][stat]
-            w_a = results['w_a'][stat]
+            # NOTE: I don't particularly like this handling. I should probably do this assigning further upstream (say in fr.posterior_stats())
+            # I didn't realize the handling her had changed from when I used to rely on .posterior_summary() function contained in LIET class
+            if 'mL_a' in results.keys():
+                mL_a = results['mL_a'][stat]
+            else:
+                mL_a = results['mL'][stat]
+            if 'sL_a' in results.keys():
+                sL_a = results['sL_a'][stat]
+            else:
+                sL_a = results['sL'][stat]
+            if 'tI_a' in results.keys():
+                tI_a = results['tI_a'][stat]
+            else:
+                tI_a = results['tI'][stat]
+            if 'w_a' in results.keys():
+                w_a = results['w_a'][stat]
+            else:
+                w_a = results['w'][stat]
             # Have to do this so that the weights arrays are length 4
             if len(w_a) == 1:
                 w_a.extend([0, 0, 0])
@@ -373,7 +390,299 @@ def LIET_plot(
         )
         return 0
 
-    if isinstance(save, str):
+    if save:
         plt.savefig(save, bbox_inches='tight', dpi=dpi)
 
     return fig
+
+
+    #==========================================================================
+
+def LIET_ax(
+    ax,
+    mL = None,
+    sL = None,
+    tI = None,
+    mT = None,
+    sT = None,
+    w = None,
+    mL_a = None,
+    sL_a = None,
+    tI_a = None,
+    w_a = None,
+    strand = None,
+    xvals = None,
+    data = None,
+    nbins = 'auto',
+):
+
+    '''
+    Plotting function alternative to LIET_plot(). Plots onto matplotlib axis 
+    object. Called from LIET_plot2() which I'm using to generate figures for 
+    the paper.
+    
+    Parameters
+    ----------
+
+
+    Returns
+    -------
+    None
+    '''
+    # # Scaling method for relative scaling of strands
+    # try:
+    #     Np = len(data['pos_reads'])
+    #     Nn = len(data['neg_reads'])
+
+    #     frac_p = Np / (Np + Nn)
+    #     frac_n = Nn / (Np + Nn)
+    # except:
+    #     frac_p = 1.0
+    #     frac_n = 1.0
+
+    # if strand == '+' or strand == 1:
+        
+    #     # If gene on pos strand, must invert antisense strand position
+    #     mL_a = ds.invert(mL_a, 0)
+
+    #     plot_params = dict(
+    #         mu0_p = mL, 
+    #         sig0_p = sL, 
+    #         tau0_p = tI, 
+    #         mu1_p = mT, 
+    #         sig1_p = sT,
+    #         mu0_n = mL_a, 
+    #         sig0_n = sL_a, 
+    #         tau0_n = tI_a, 
+    #         mu1_n = None, 
+    #         sig1_n = None,
+    #         w_p = w,
+    #         w_n = w_a,
+    #         N_p = 1000,
+    #         N_n = 1000,
+    #         rvs = False, 
+    #         pdf = True
+    #     )
+
+    # else:
+    #     # If gene on neg strand, must invert sense strand positions
+    #     print(f"ML, MT (preflip): {mL}, {mT}")
+    #     mL = ds.invert(mL, 0)
+    #     mT = ds.invert(mT, 0)
+
+    #     plot_params = dict(
+    #         mu0_p = mL_a, 
+    #         sig0_p = sL_a, 
+    #         tau0_p = tI_a, 
+    #         mu1_p = None, 
+    #         sig1_p = None,
+    #         mu0_n = mL, 
+    #         sig0_n = sL, 
+    #         tau0_n = tI, 
+    #         mu1_n = mT, 
+    #         sig1_n = sT,
+    #         w_p = w_a,
+    #         w_n = w,
+    #         N_p = 1000,
+    #         N_n = 1000,
+    #         rvs = False, 
+    #         pdf = True
+    #     )
+    #     print(f"ML, MT, ML_A: {mL}, {mT}, {mL_a}")
+
+    # # Generate pdfs for fitting results
+    # print(f"xvals range: {min(xvals)}, {max(xvals)}")
+    # pdf_p, pdf_n = ds.gene_model(xvals, **plot_params)
+
+    pdf_p, pdf_n, frac_p, frac_n = pdf_generator(
+        mL = mL,
+        sL = sL,
+        tI = tI,
+        mT = mT,
+        sT = sT,
+        w = w,
+        mL_a = mL_a,
+        sL_a = sL_a,
+        tI_a = tI_a,
+        w_a = w_a,
+        strand = strand,
+        xvals = xvals,
+        data = data
+    )
+    # Plot pdfs of gene dependant on <sense> and <antisense>
+    if strand == '+' or strand == 1:
+        # Sense
+        ax.plot(xvals, pdf_p * frac_p, color='C0')
+        # Antisense
+        ax.plot(xvals, -pdf_n * frac_n, color='C3')
+    else:
+        # Sense
+        ax.plot(xvals, -pdf_n * frac_n, color='C3')
+        # Antisense
+        ax.plot(xvals, pdf_p * frac_n, color='C0')
+
+    # Plotting the read data
+    if data:
+        hist_p, hist_n, height_p, height_n = hist_generator(
+            data, 
+            (frac_p, frac_n), 
+            nbins=nbins
+        )
+        # Plot positive strand histogram (bar locations and widths)
+        locs_p = hist_p[1][:-1]
+        width_p = hist_p[1][1] - hist_p[1][0]
+        ax.bar(locs_p, height_p, width_p, alpha=0.2, align='edge', color='C0')
+
+        # Plot negative strand histogram (bar locations and widths)
+        locs_n = hist_n[1][:-1]
+        width_n = hist_n[1][1] - hist_n[1][0]
+        ax.bar(locs_n, height_n, width_n, alpha=0.2, align='edge', color='C3')
+
+
+#         data_p = data[0]
+#         print(f"P DATA RANGE: {min(data_p)}, {max(data_p)}")
+#         data_n = data[1]
+#         print(f"N DATA RANGE: {min(data_n)}, {max(data_n)}")
+
+#         # Horizontal inversion if data was initially shifted
+# #        data_n = ds.invert(data_n, 0)
+
+#         bmin = min(min(data_p), min(data_n))
+#         bmax = max(max(data_p), max(data_n))
+#         if nbins == "auto":
+#             bins = "auto"
+#         else:
+#             bins = np.linspace(bmin, bmax, nbins)
+
+#         # Make negative histogram for neg strand data, depending on annot
+#         if strand == '+' or strand == 1:
+#             hist = np.histogram(data_p, bins=bins, density=True)
+#             height = +hist[0] * frac_p
+#             col = 'C0'
+#         else:
+#             hist = np.histogram(data_n, bins=bins, density=True)
+#             height = -hist[0] * frac_n
+#             col = 'C3'
+
+#         loc = hist[1][:-1]
+#         width = hist[1][1] - hist[1][0]
+#         ax.bar(loc, height, width, alpha=0.2, align='edge', color=col)
+
+#         if strand == '+' or strand == 1:
+#             hist = np.histogram(data_n, bins=bins, density=True)
+#             height = -hist[0] * frac_n
+#             col = 'C3'
+#         else:
+#             hist = np.histogram(data_p, bins=bins, density=True)
+#             height = +hist[0] * frac_p
+#             col = 'C0'
+
+#         loc = hist[1][:-1]
+#         width = hist[1][1] - hist[1][0]
+#         ax.bar(loc, height, width, alpha=0.2, align='edge', color=col)
+
+    # Draw in annotations
+
+
+    # Write labels
+
+
+
+def LIET_res_load(
+    gene_id,
+    config=None,
+    result=None,
+    log=None
+):
+    '''
+    Used in conjuction with LIET_ax() in LIET_plot2() to read in fit results 
+    and data to plot the model fit against the data. Uses the FitParse class 
+    to process the fit results and the bgreads() method to read in the data.
+
+    NOTE: This framework may be more appropriate for the fitting results lib.
+    '''
+    # Parse config and fit results files
+    config_parse = dp.config_loader(config)
+    fit_parse = FitParse(result, log_file=log)
+
+    # Only need the input files from config
+    bgp_file = config_parse['FILES']['BEDGRAPH_POS']
+    bgn_file = config_parse['FILES']['BEDGRAPH_NEG']
+
+    # Extract range and annot data for specific gene
+    fit_range = fit_parse.log[gene_id]['fit_range']
+    chromosome, start, stop, strand = fit_parse.annotations[gene_id]
+    xvals = np.array(range(*fit_range))
+
+    # Determine chromosome string order
+    chr_order = dp.chrom_order_reader(bgp_file, bgn_file)
+
+    # Extract read data for gene from bedGraphs
+    with open(bgp_file, 'r') as bgp, open(bgn_file, 'r') as bgn:
+        current_bgpl = ['chr1', 0, 0, 0]    # Initialize pos strand bg line
+        current_bgnl = ['chr1', 0, 0, 0]    # Initialize neg strand bg line
+
+        bgp_args = [
+            bgp, 
+            current_bgpl, 
+            chromosome, 
+            fit_range[0] + start,
+            fit_range[1] + start,
+            chr_order
+        ]
+        _, preads = dp.bgreads(*bgp_args)
+        
+        bgn_args = [
+            bgn, 
+            current_bgnl, 
+            chromosome, 
+            fit_range[0] + start,
+            fit_range[1] + start,
+            chr_order
+        ]
+        _, nreads = dp.bgreads(*bgn_args)
+
+    # Convert read dicts to list and concatenate
+    data = [dp.reads_d2l(preads), dp.reads_d2l(nreads)]
+
+    # Shift data genomic coordinates to TSS
+    data = [[i-start for i in data[0]], [i-start for i in data[1]]]
+
+    # Extract parameter values from FitParse object
+    model_params = {p:v[0] for p, v in fit_parse.fits[gene_id].items()}
+
+    # Enforce that weights sum to 1.0 by adjusting wB
+    wb_update = np.around(1.0 - sum(model_params['w'][0:3]), decimals=2)
+
+    model_params['w'] = (*model_params['w'][0:3], wb_update)
+
+    return xvals, data, model_params, strand
+
+
+
+# def LIET_plot2(
+#     ax_gid_pairs,
+#     config=None,
+#     result=None,
+#     log=None
+# ):
+#     '''
+#     This function generates a LIET model fit plot in a matplotlib Axes object, 
+#     for a specified gene ID. It loads data and fit parameters from config, 
+#     bedGraph, and LIET fit results output file and then calls the LIET_ax() 
+#     function to perform the actual plotting.
+#     '''
+
+#     results = LIET_res_load(gene_id, config=config, result=result, log=log)
+
+#     print(f"STRAND: {strand}")
+#     print(f"PARAMS: {model_params.items()}")
+#     # Generate plot on Axes object ax
+#     LIET_ax(
+#         ax,
+#         **model_params,
+#         strand = strand,
+#         xvals = xvals,
+#         data = data,
+#         nbins = 1000,
+#     )

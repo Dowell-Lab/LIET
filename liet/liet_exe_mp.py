@@ -5,6 +5,7 @@ import argparse
 import traceback
 import numpy as np
 import multiprocessing as mp
+import matplotlib.pyplot as plt
 
 from rnap_lib_LIET_class import LIET
 import rnap_lib_data_proc as dp
@@ -12,44 +13,6 @@ import rnap_lib_data_sim as ds
 import rnap_lib_fitting_results as fr
 import rnap_lib_plotting as pl
 
-## SLURM INFO =================================================================
-env = os.environ
-cpu_num = int(os.environ['SLURM_CPUS_ON_NODE'])
-
-## COMMAND LINE INFO ==========================================================
-description_text = ("LIET model executable. Required input: config file.")
-
-config_text = ("Path to config file.")
-
-parser = argparse.ArgumentParser(description = description_text)
-
-## PARSE ARGS AND OPEN CONFIG =================================================
-parser.add_argument('-c', '--config', type = str, help = config_text)
-args = parser.parse_args()
-config_file = args.config
-
-## PROCESS INPUTS =============================================================
-
-# Load config (contents: FILES, MODEL, PRIORS, DATA_PROC, FITTING, RESULTS)
-#config_file = "C:\\Users\\Jacob\\Dropbox\\0DOWELL\\rnap_model\\LIET\\test_config.txt"
-config = dp.config_loader(config_file)
-
-# Parse annotation file
-annot_file = config['FILES']['ANNOTATION']
-annot_dict, pad_dict = dp.annot_loader(annot_file)
-
-# Open bedgraph files and load reads
-bgp_file = config['FILES']['BEDGRAPH_POS']
-bgn_file = config['FILES']['BEDGRAPH_NEG']
-reads_dict = dp.bedgraph_loader(bgp_file, bgn_file, annot_dict, pad_dict)
-
-print(f"RD: {reads_dict.keys()}")
-# Combine annot_dict and reads_dict for parallelization input
-mpargs = {
-    (ch, a, gid) : reads_dict[gid] 
-    for ch, annots in annot_dict.items() 
-    for a, gid in annots.items()
-}
 
 # Parallelizable function that performs all the fitting
 def fit_routine(fit_instance, config, pad_dict):
@@ -110,7 +73,7 @@ def fit_routine(fit_instance, config, pad_dict):
         }
         liet.load_seq_data(**data)
     except:
-        return_dict['res'] = f"{annot_dict['gene_id']}: seq data load error\n"
+        return_dict['res'] = f"{annot_dict['gene_id']}: seq data error\n"
         return_dict['err'].append(f"{traceback.format_exc()}\n")
         return {annot: return_dict}
 
@@ -122,6 +85,8 @@ def fit_routine(fit_instance, config, pad_dict):
         else:
             tss = start
             tcs = stop
+        # NOTE: prior_config will acount for gene length in mT offset for 
+        # RANGE_SHIFT == True.
         priors = dp.prior_config(config['PRIORS'], tss, tcs)
         liet.set_priors(**priors)
     except:
@@ -136,7 +101,7 @@ def fit_routine(fit_instance, config, pad_dict):
             background=config['MODEL']['BACKGROUND']
         )
     except:
-        return_dict['res'] = f"{annot_dict['gene_id']}: model build error\n"
+        return_dict['res'] = f"{annot_dict['gene_id']}: model error\n"
         return_dict['err'].append(f"{traceback.format_exc()}\n")
         return {annot: return_dict}
 
@@ -209,84 +174,153 @@ def fit_routine(fit_instance, config, pad_dict):
         return {annot: return_dict}
 
     # Plot fit result
-    try:
-        liet.results = post_stats
-        lplot = pl.LIET_plot(
-            liet, 
-            data=True,
-            antisense=True,
-            sense=True,
-            save=f"liet_plot_{gene_id}.pdf"
-        )
-#        lplot.close()
-    except:
-        print(f"Can't plot fit result for {gene_id}")
-        return_dict['err'].append(f"{traceback.format_exc()}\n")
-
+    if config['RESULTS']['PDF']:
+        try:
+            # Add posterior stats to liet object before plotting.
+            liet.results = post_stats
+            lplot = pl.LIET_plot(
+                liet, 
+                data=True,
+                antisense=True,
+                sense=True,
+                save=config['RESULTS']['PDF']
+                #save=f"liet_plot_{gene_id}.pdf"
+            )
+            plt.close(lplot)
+        except:
+            print(f"Can't plot fit result for {gene_id}")
+            return_dict['err'].append(f"{traceback.format_exc()}\n")
+    else:
+        pass
+    
     return {annot: return_dict}
 
-# Run fitting in parallel
-print(f"CPU: {cpu_num}")
 
-pool = mp.Pool(cpu_num)
-res = pool.starmap(fit_routine, [(i, config, pad_dict) for i in mpargs.items()])
-pool.close()
+def main():
 
-#with mp.Pool(processes=mp.cpu_count()) as pool:
-#    res = list(pool.apply(fit_routine, args=[i, config, pad_dict]) for i in mpargs.items())
-#res = res.get()
-#print(f"LENGTH res: {len(res)}")
+    ## SLURM INFO =============================================================
+    env = os.environ
+    cpu_num = int(os.environ['SLURM_CPUS_ON_NODE'])
 
-print("Fitting complete")
+    ## COMMAND LINE INFO ======================================================
+    description_text = ("LIET model executable. Required input: config file.")
 
-# Convert `res` tuple into a dictionary
-res_dict = {}
-for i in res:
-#    print(f"ref: {i}")
-    res_dict.update(i)
+    config_text = ("Path to config file.")
 
-# Open err function
-res_filename = config['FILES']['RESULTS']
-err_filename = res_filename + ".err"
-err_file = open(err_filename, 'w')
+    parser = argparse.ArgumentParser(description = description_text)
 
-# Open results and log files and initialize them
-res_filename = config['FILES']['RESULTS']
-res_file = open(res_filename, 'w')
-fr.res_file_init(res_file, config_file)
-print(f"res file: {res_filename}")
+    ## PARSE ARGS AND OPEN CONFIG =============================================
+    parser.add_argument('-c', '--config', type = str, help = config_text)
+    args = parser.parse_args()
+    config_file = args.config
 
-log_filename = f"{res_filename}.log"                                     # Need to finalize this function
-log_file = open(log_filename, 'w')
-fr.log_file_init(log_file, config_file)
-print(f"log file: {log_filename}")
+    ## PROCESS INPUTS =========================================================
 
-# Record results and log information
-for annot, fitres in res_dict.items():
-    res_str = fitres['res']
-    print(f"RES LINE: {res_str}\n")
-    log_str = fitres['log']
-    print(f"LOG LINE: {log_str}\n")
-    err_str = fitres['err']
+    # Load config (contents: FILES, MODEL, PRIORS, DATA_PROC, FITTING, RESULTS)
+    #config_file = "C:\\Users\\Jacob\\Dropbox\\0DOWELL\\rnap_model\\LIET\\test_config.txt"
+    config = dp.config_loader(config_file)
 
-    try:
-        res_file.write(res_str)
-    except:
-        print(f"Can't write res: {annot}")
-    try:
-        for line in log_str:
-            log_file.write(line)
-    except:
-        print(f"Can't write log: {annot}")
-    try:
-        for line in err_str:
-            err_file.write(line)
-    except:
-        print(f"Can't write err: {annot}")
+    # Parse annotation file
+    annot_file = config['FILES']['ANNOTATION']
+#    annot_dict, pad_dict = dp.annot_loader(annot_file)                         # This old annotation loader is not compatible with the BED6 format I'm using now, output from Mary's hermits script
+    pad5, pad3 = config['DATA_PROC']['PAD']
+    annot_dict, pad_dict = dp.annot_BED6_loader(annot_file, pad5, pad3)
 
-print("ALL DONE")
-res_file.close()
-log_file.close()
-err_file.close()
+    # Open bedgraph files and load reads
+    bgp_file = config['FILES']['BEDGRAPH_POS']
+    bgn_file = config['FILES']['BEDGRAPH_NEG']
+    reads_dict = dp.bedgraph_loader(bgp_file, bgn_file, annot_dict, pad_dict)
 
-sys.exit(0)
+    # Filter out genes with zero/low coverage
+    if config['DATA_PROC']['COV_THRESHOLDS']:
+        cov_thresh = config['DATA_PROC']['COV_THRESHOLDS']
+    else:
+        cov_thresh = (0, 0)
+    filtered = dp.cov_filter(reads_dict, annot_dict, thresholds=cov_thresh)
+    reads_dict, annot_dict, filter_log = filtered
+
+    print(f"RD: {reads_dict.keys()}")
+    # Combine annot_dict and reads_dict for parallelization input
+    mpargs = {
+        (ch, a, gid) : reads_dict[gid] 
+        for ch, annots in annot_dict.items() 
+        for a, gid in annots.items()
+    }
+
+    # RUN PARALLEL FITTING ====================================================
+    print(f"CPU: {cpu_num}")
+
+    pool = mp.Pool(cpu_num)
+    res = pool.starmap(
+        fit_routine, 
+        [(i, config, pad_dict) for i in mpargs.items()]
+    )
+    pool.close()
+
+    #with mp.Pool(processes=mp.cpu_count()) as pool:
+    #    res = list(pool.apply(fit_routine, args=[i, config, pad_dict]) for i in mpargs.items())
+    #res = res.get()
+    #print(f"LENGTH res: {len(res)}")
+
+    print("Fitting complete")
+
+    # Convert 'res' tuple into a dictionary
+    res_dict = {}
+    for i in res:
+    #    print(f"ref: {i}")
+        res_dict.update(i)
+
+    # Open err function
+    res_filename = config['FILES']['RESULTS']
+    err_filename = res_filename + ".err"
+    err_file = open(err_filename, 'w')
+
+    # Open results and log files and initialize them
+    res_filename = config['FILES']['RESULTS']
+    res_file = open(res_filename, 'w')
+    fr.res_file_init(res_file, config_file)
+    print(f"res file: {res_filename}")
+
+    log_filename = f"{res_filename}.log"                                     # Need to finalize this function
+    log_file = open(log_filename, 'w')
+    fr.log_file_init(log_file, config_file)
+    print(f"log file: {log_filename}")
+
+    # Record results and log information
+    # annot format: (chrom, (start, stop, strand), gene_id)
+    for annot, fitres in res_dict.items():
+        res_str = fitres['res']
+        print(f"RES LINE: {res_str}\n")
+        log_str = fitres['log']
+        print(f"LOG LINE: {log_str}\n")
+        err_str = fitres['err']
+
+        try:
+            res_file.write(res_str)
+        except:
+            print(f"Can't write res: {annot}")
+        try:
+            for line in log_str:
+                log_file.write(line)
+        except:
+            print(f"Can't write log: {annot}")
+        try:
+            # Record fitting error
+            for line in err_str:
+                err_file.write(line)
+            # Record coverage filter error
+            if annot[2] in filter_log.keys():
+                err_file.write(filter_log[annot[2]])
+        except:
+            print(f"Can't write err: {annot}")
+
+    print("ALL DONE")
+    res_file.close()
+    log_file.close()
+    err_file.close()
+
+    sys.exit(0)
+
+
+if __name__ == '__main__':
+    main()

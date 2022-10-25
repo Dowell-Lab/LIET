@@ -1,3 +1,4 @@
+import sys
 import numpy as np
 import copy
 from collections import defaultdict
@@ -17,12 +18,74 @@ def annotation(chrom=None, start=None, stop=None, strand=None):
     return out
 
 
+def annot_BED6_loader(annot_file, pad5, pad3):
+    '''
+    Loads annotations from BED6 file into a dictionary and then sorts 
+    them by genomic coordinate and strand. Returns sorted dict of form:
+    annot_sorted: {'chr#': {(start, stop, strand): gene_id, ...}, ...}
+    pad: {gene_id: (pad5, pad3), ... }
+    
+    Only uses the following fields from the BED6 formatted input: 
+    chr (0), start (1), stop (2), name (3), strand (5)
+    '''
+    strand_dict = {'+': 1, '-': -1}
+    pad = {}
+
+    # Initialize annotation dictionary with chrom ID's in annot file
+    with open(annot_file, 'r') as af:
+        chromosomes = set()
+        for line in af:
+            chrom = str(line.strip().split('\t')[0])
+            chromosomes.add(chrom)
+    
+    annot = {ch:{} for ch in sorted(chromosomes)}
+
+    # Open BED6 file (tab delimited: chr, start, stop, id, score, strand)
+    with open(annot_file, 'r') as af:
+
+        for i, line in enumerate(af):
+            line = line.strip().split('\t')
+
+            if len(line) != 6:
+                raise ValueError(f"Annotation at line {i} is incorrectly "
+                    f"formatted. See: '{line}'")
+
+            try:
+                chrom = str(line[0])
+                start = int(line[1])
+                stop = int(line[2])
+                id = str(line[3])
+                strnd = strand_dict[line[5]]
+                annot[chrom][(start, stop, strnd)] = id
+
+                pad[id] = (int(pad5), int(pad3))
+
+            except KeyError:
+                raise KeyError(f"One or both keys {chrom} and {id} do not"
+                    "exist.")
+            except:
+                raise ValueError(f"Can't parse line {i}. Incorrectly "
+                    f"formatted. See: '{line}'")
+
+    # Sort the regions of interest for each chromosome and write to out dict
+    annot_sorted = {}
+    for ch, rois in annot.items():
+        if rois != {}:
+            annot_sorted[ch] = {r:annot[ch][r] for r in sorted(rois.keys())}
+        else:
+            continue
+    
+    return annot_sorted, pad
+
 
 def annot_loader(annot_file):
     '''
+    NOTE: Depricated. Replaced by annot_BED6_loader()
+
     Loads annotations from basic gtf file into a dictionary and then sorts 
     them by genomic coordinate and strand. Returns sorted dict of form:
-    {'chr#': {(start, stop, strand): gene_id, ...}, ...}
+    annot_sorted: {'chr#': {(start, stop, strand): gene_id, ...}, ...}
+    pad: {gene_id: (pad5, pad3), ... }
     '''
 
     chromosomes = [
@@ -108,11 +171,11 @@ def config_loader(config_file):
         'MODEL': {'ANTISENSE':None, 'BACKGROUND':None, 'FRACPRIORS':None}, 
         'PRIORS': {'mL':None, 'sL':None, 'tI':None, 'mT':None, 'sT':None,
             'mL_a':None, 'sL_a':None, 'tI_a':None, 'w':None}, 
-        'DATA_PROC': {'RANGE_SHIFT':None, 'PAD':None}, 
+        'DATA_PROC': {'RANGE_SHIFT':None, 'PAD':None, 'COV_THRESHOLDS':None}, 
         'FIT': {'ITERATIONS':None, 'LEARNING_RATE':None, 'METHOD':None,
             'OPTIMIZER':None, 'MEANFIELD':None, 'TOLERANCE':None}, 
         'RESULTS': {'SAMPLES':None, 'MEAN':None, 'MODE':None, 'MEDIAN': None, 
-            'STDEV':None, 'SKEW':None}
+            'STDEV':None, 'SKEW':None, 'PDF': False}
     }
 
     with open(config_file, 'r') as f:
@@ -163,7 +226,8 @@ def config_loader(config_file):
             # DATA_PROC
             elif pname == 'RANGE_SHIFT':
                 config[category][pname] = bool_cast(pval)
-            elif pname == 'PAD':
+            elif (pname == 'PAD' or
+                pname == 'COV_THRESHOLDS'):
                 pval = pval.strip().split(',')
                 pval = [float_int_cast(i) for i in pval]
                 config[category][pname] = pval
@@ -196,7 +260,8 @@ def config_loader(config_file):
                     raise ValueError(f"Input {pname} must be an integer.")
             elif pname in ['MEAN', 'MODE', 'MEDIAN', 'STDEV', 'SKEW']:
                 config[category][pname] = bool_cast(pval)
-
+            elif pname == 'PDF':
+                config[category][pname] = bool_cast(pval)
             else:
                 raise ValueError(f"Incorrect input parameter: {pname}")
     
@@ -231,6 +296,8 @@ def prior_config(priors, tss, tcs, frac_priors=False):
         .set_priors() method. 
     '''
     #absolute_priors = ['sL', 'tI', 'sT', 'w', 'sL_a', 'tI_a']
+    # NOTE: Input value tss will be 0 and tcs will be same as len_scale if 
+    # RANGE_SHIFT == True. This is set in liet_exe_mp.
     relative_priors = {'mL': tss, 'mT': tcs, 'mL_a': tss}
     len_scale = abs(tcs - tss)
 
@@ -388,29 +455,71 @@ def reads_d2l(readdict):
     return readlist
 
 
-def bglist_check(bglist, chromosome, begin, end):
+def chrom_order_reader(bedgraph_file1, bedgraph_file2):
+    '''
+    Create a dictionary containing an ordered set of chromosome strings. The 
+    chromosome strings are the keys and the values are the indexing values. 
+    The strings are sourced from the two bedgraph files, preserving the order. 
+    Format: {'chr1': 1, 'chr2': 2, ...}
+    '''
+    with open(bedgraph_file1, 'r') as bgf:
+        chrom1 = [line.strip().split('\t')[0] for line in bgf]
+    with open(bedgraph_file2, 'r') as bgf:
+        chrom2 = [line.strip().split('\t')[0] for line in bgf]
+
+    chrom1 = sorted(set(chrom1), key=chrom1.index)
+    chrom2 = sorted(set(chrom2), key=chrom2.index)
+
+    common = set(chrom1).intersection(set(chrom2))
+
+    if set(chrom1) != common:
+        print("WARNING: BedGraph files do not have all the same chromosomes.", 
+            file=sys.stderr)
+    
+    chr_order = dict([tuple(reversed(t)) for t in enumerate(chrom1) if t[1] in common])
+    return chr_order
+    
+
+def bglist_check(bglist, chromosome, begin, end, chr_order):
     '''
     Checks if <bglist> is upstream, overlapping or downstream of annot. Returns
      +1, 0, -1 respectively. Annotation given by <chromosome>, <begin>, and 
-    <end>.
+    <end>. Bedgraph line <bglist> is of the form [chr_id, initial, final, ...].
+    This function will return None if the bedgraph line chromsome ID or the 
+    annotation chromosome ID are not contained in the <chr_order> reference 
+    dictionary which contains the chromosome ordering.
     '''
-    chr_order = {
-        'chr1':1, 'chr2':2, 'chr3':3, 'chr4':4, 'chr5':5, 'chr6':6, 'chr7':7, 
-        'chr8':8, 'chr9':9, 'chr10':10, 'chr11':11, 'chr12':12, 'chr13':13, 
-        'chr14':14, 'chr15':15, 'chr16':16, 'chr17':17, 'chr18':18, 'chr19':19,
-        'chr20':20, 'chr21':21, 'chr22':22, 'chr23':23, 'chrX':24, 'chrY':25
-    }
+    #chr_order = {
+    #    'chr1':1, 'chr2':2, 'chr3':3, 'chr4':4, 'chr5':5, 'chr6':6, 'chr7':7, 
+    #    'chr8':8, 'chr9':9, 'chr10':10, 'chr11':11, 'chr12':12, 'chr13':13, 
+    #    'chr14':14, 'chr15':15, 'chr16':16, 'chr17':17, 'chr18':18, 'chr19':19,
+    #    'chr20':20, 'chr21':21, 'chr22':22, 'chr23':23, 'chrX':24, 'chrY':25
+    #}
 
-    chl = chr_order[bglist[0]]
-    cha = chr_order[chromosome]
-    i = bglist[1]
-    f = bglist[2]
+    # Determine bedgraph line and annot chromosome indexes
+    try:
+        bg_chrom = bglist[0]
+        bg_idx = chr_order[bg_chrom]
+    except KeyError:
+        print(f"WARNING: {bg_chrom} is not contained in shared chr IDs",
+            file=sys.stderr)
+        return None
+    try:
+        annot_idx = chr_order[chromosome]
+    except KeyError:
+        print(f"WARNING: {chromosome} is not contained in shared chr IDs", 
+            file=sys.stderr)
+        return None
+
+    # Initial/final base positions for bedGraph line
+    initial = bglist[1]
+    final = bglist[2]
     
     # bedgraph list on upstream chromosome or upstream on same chromosome
-    if chl < cha or (chl == cha and f < begin):
+    if bg_idx < annot_idx or (bg_idx == annot_idx and final < begin):
         return 1
     # bedgraph list on downstream chromosome or downstream on same chromosome
-    elif chl > cha or (chl == cha and i > end):
+    elif bg_idx > annot_idx or (bg_idx == annot_idx and initial > end):
         return -1
     # bedgraph list is overlapping annotation
     else:
@@ -424,10 +533,11 @@ def add_bg_dict(bglist, begin, end, reads_dict):
     '''
     ch, i, f, ct = bglist
     
-    overlap_region = [ch, max(i, begin), min(f, end), ct]
+    overlap_region = [ch, max(i, begin), min(f, end), abs(ct)]
     reads = bg2d(overlap_region)
     
-    if ct > 0:
+    # Absolute value accounts for neg-strand BG files with neg count values
+    if abs(ct) > 0:
         reads_dict.update(reads)
 
 
@@ -533,7 +643,7 @@ def add_bg_dict(bglist, begin, end, reads_dict):
 #         return bglist, preads, nreads
 
 
-def bgreads(bg, current_bg_list, chromosome, begin, end):
+def bgreads(bg, current_bg_list, chromosome, begin, end, chr_order):
     '''
     Primary method for processing bedgraph lines and converting them to read
     lists appropriate for loading into LIET class instance. 
@@ -559,6 +669,10 @@ def bgreads(bg, current_bg_list, chromosome, begin, end):
     end : int
         Last genomic coordinate of the annotation being evaluated.
 
+    chr_order : dict
+        Dictionary containing the ordering of chromosome strings. The keys are 
+        the chromosome ID strings read from the bedgraph files and the values 
+        are their numeric indexes.
 
     Returns
     -------
@@ -574,23 +688,23 @@ def bgreads(bg, current_bg_list, chromosome, begin, end):
     reads = {}
     
     # Process current line
-    loc = bglist_check(current_bg_list, chromosome, begin, end)
+    loc = bglist_check(current_bg_list, chromosome, begin, end, chr_order)
     # Overlapping
     if loc == 0:
         add_bg_dict(current_bg_list, begin, end, reads) #Update w/ new reads
     # Downstream
     elif loc == -1:
         return current_bg_list, reads
-    # Upstream
+    # Upstream (1) or wrong chromosome (None)
     else:
         pass
     
     # Iterate through bedgraph until reaching first downstream line
     for bgline in bg:
         bglist = bgline_cast(bgline)
-        loc = bglist_check(bglist, chromosome, begin, end)
-        # Upstream
-        if loc == 1:
+        loc = bglist_check(bglist, chromosome, begin, end, chr_order)
+        # Upstream or invalid chromosome
+        if loc == 1 or loc == None:
             continue
         # Overlap
         elif loc == 0:
@@ -653,7 +767,7 @@ def pad_calc(start, stop, strand, pad):
         raise ValueError("pad must be either a list or tuple (5' pad, 3' pad")
 
 
-def bedgraph_loader(bgp_file, bgn_file, annot_dict, pad_dict):
+def bedgraph_loader(bgp_file, bgn_file, annot_dict, pad_dict, chr_order=None):
     '''
     This is the main function for reading in the entirety of a pair of bedgraph
      files (pos and neg strands), for all the annotations in a annot dict. It 
@@ -669,7 +783,7 @@ def bedgraph_loader(bgp_file, bgn_file, annot_dict, pad_dict):
 
     annot_dict : dict
         Annotation dictionary containing gene IDs as well as their genomic 
-        coordinates extracted from a GTF. Generated by annot_loader(). 
+        coordinates extracted from a GTF. Generated by annot_BED6_loader(). 
         Format: {'chr#': {(start, stop, strand): gene_id, ...}, ...}
         NOTE: annot_dict keys must be sorted by chromosome and coordinates
 
@@ -679,13 +793,22 @@ def bedgraph_loader(bgp_file, bgn_file, annot_dict, pad_dict):
         by annot_load() at the same time as annot_dict. Format: 
         {'gene_id': (5'pad, 3'pad), ...}
 
+    order : dict
+        External chromosome order. If None (default) order is generated by the 
+        chrom_order_reader() function.
+
     Returns
     -------
     read_dict : dict
         Dictionary containing the reads from the bedgraph file for each ID in 
         the annot_dict. The reads are returned as a Counter style dictionary.
+        Format: {'gene_id': (preads, nreads), ...}
     '''
     read_dict = {}
+
+    # Determine chromosome string order if none provided
+    if chr_order == None:
+        chr_order = chrom_order_reader(bgp_file, bgn_file)
 
     with open(bgp_file, 'r') as bgp, open(bgn_file, 'r') as bgn:
         current_bgpl = ['chr1', 0, 0, 0]    # Initialize pos strand bg line
@@ -704,16 +827,106 @@ def bedgraph_loader(bgp_file, bgn_file, annot_dict, pad_dict):
                 adj_start, adj_stop = pad_calc(*pad_args)
 
                 # Extract reads
-                bgp_args = [bgp, current_bgpl, chromosome, adj_start, adj_stop]
+                bgp_args = [
+                    bgp, 
+                    current_bgpl, 
+                    chromosome, 
+                    adj_start, 
+                    adj_stop,
+                    chr_order
+                ]
                 current_bgpl, preads = bgreads(*bgp_args)
                 
-                bgn_args = [bgn, current_bgnl, chromosome, adj_start, adj_stop]
+                bgn_args = [
+                    bgn, 
+                    current_bgnl, 
+                    chromosome, 
+                    adj_start, 
+                    adj_stop,
+                    chr_order
+                ]
                 current_bgnl, nreads = bgreads(*bgn_args)
 
                 # Assign reads to output dict
                 read_dict[gene_id] = (preads, nreads)
 
     return read_dict
+
+
+# FILTERING ===================================================================
+
+def cov_filter(reads, annotations, thresholds=(0, 0)):
+    '''
+    This funciton is used to filter out genes with low or no coverage on the 
+    sense and/or anti-sense strands. The threshold values (sense, anti-sense) 
+    are compared to values of reads dict and then removed from it as well as 
+    the annotation dict.
+
+    Parameters
+    ----------
+    reads : dict
+        Dictionary containing read data from bedGraph files. Reads are in a
+        Counter-like dictionary {<base position> : <count>, ...}
+        Format: {'gene_id': (preads, nreads), ...}
+    
+    annots : dict
+        Dictionary continaing annotations for each gene to be fit.
+        Format: {'chr#': {(start, stop, strand): gene_id, ...}, ...}
+
+    thresholds : tuple
+        Sense and anti-sense strand coverage threshold for filter (# reads).
+
+    Returns
+    -------
+    reads_filtered : dict
+        Dictionary containing filtered reads, formatted same as input.
+
+    annots_filtered : dict
+        Dictionary containing filtered annotations, formatted same as input.
+
+    err_info : list
+        Information to be logged on which genes had been removed and why.
+    '''
+
+    # Extract strand info
+    strands = {gene_id: annot[2] for chrom_annots in annotations.values() 
+               for annot, gene_id in chrom_annots.items()}
+
+    remove_genes = set()
+    log_info = {}
+
+    for gene, strand in strands.items():
+
+        # Sense (map: strand +1 --> index 0 and -1 --> 1)
+        sense_cov = sum(reads[gene][round((1-strand)/2)].values())
+        # Anti-sense (map: strand +1 --> index 1 and -1 --> 0)
+        antisense_cov = sum(reads[gene][round((1+strand)/2)].values())
+    
+        if sense_cov <= thresholds[0] and antisense_cov > thresholds[1]:
+            remove_genes.add(gene)
+            log_str = f"Cov filter ({sense_cov}, {antisense_cov}):sense\n"
+            log_info[gene] = log_str
+
+        elif sense_cov > thresholds[0] and antisense_cov <= thresholds[1]:
+            remove_genes.add(gene)
+            log_str = f"Cov filter ({sense_cov}, {antisense_cov}):anti\n"
+            log_info[gene] = log_str
+
+        elif sense_cov <= thresholds[0] and antisense_cov <= thresholds[1]:
+            remove_genes.add(gene)
+            log_str = f"Cov filter ({sense_cov}, {antisense_cov}):sense,anti\n"
+            log_info[gene] = log_str
+
+        else:
+            continue
+
+    reads_filtered = {g: r for g, r in reads.items() if g not in remove_genes}
+    annots_filtered = {}
+    for chromosome, chrom_annots in annotations.items():
+        filt = {a: g for a, g in chrom_annots.items() if g not in remove_genes}
+        annots_filtered[chromosome] = filt
+
+    return reads_filtered, annots_filtered, log_info
 
 
 
