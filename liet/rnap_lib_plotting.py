@@ -588,8 +588,6 @@ def LIET_ax(
 
 
 
-
-
 def LIET_res_load(
     gene_id,
     config=None,
