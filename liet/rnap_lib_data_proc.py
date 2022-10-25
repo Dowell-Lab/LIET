@@ -296,6 +296,8 @@ def prior_config(priors, tss, tcs, frac_priors=False):
         .set_priors() method. 
     '''
     #absolute_priors = ['sL', 'tI', 'sT', 'w', 'sL_a', 'tI_a']
+    # NOTE: Input value tss will be 0 and tcs will be same as len_scale if 
+    # RANGE_SHIFT == True. This is set in liet_exe_mp.
     relative_priors = {'mL': tss, 'mT': tcs, 'mL_a': tss}
     len_scale = abs(tcs - tss)
 
