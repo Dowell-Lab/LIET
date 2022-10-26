@@ -464,9 +464,9 @@ class LIET:
                 )
 
                 # Normalize distribution in logscale
-#                log_pdf = _log_unscaled - _log_norm_factor
+                log_pdf = _log_unscaled - _log_norm_factor
                                                                             # NOT SURE IF I NEED THIS BOUNDING
-                log_pdf = pm.distributions.dist_math.bound(_log_unscaled - _log_norm_factor, self._p['mL'] < self._p['mT'])
+#                log_pdf = pm.distributions.dist_math.bound(_log_unscaled - _log_norm_factor, self._p['mL'] < self._p['mT'])
 
                 return log_pdf
                 #==============================================================
