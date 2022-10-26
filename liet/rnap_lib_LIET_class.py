@@ -478,8 +478,8 @@ class LIET:
                 nu=self._p['tI']
             )
 
-            # Convert Theano log-prob func into pymc3 distribution variable
-            E_pdf = pm.DensityDist.dist(logp=elong_logp)
+            # Convert Theano log-prob func into pymc distribution variable
+            E_pdf = pm.DensityDist.dist(class_name='E_pdf', logp=elong_logp)
             
             # Distribution for the Termination phase (native to pymc3)
             T_pdf = pm.Normal.dist(mu=self._p['mT'], sigma=self._p['sT'])
