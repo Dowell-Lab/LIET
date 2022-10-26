@@ -1,6 +1,6 @@
 import numpy as np
 import scipy as sp
-import pymc3 as pm
+import pymc as pm
 import time
 from collections import OrderedDict
 

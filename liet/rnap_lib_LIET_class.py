@@ -7,10 +7,10 @@ __email__ = 'jacob.stanley@colorado.edu'
 
 import numpy as np
 import scipy as sp
-import pymc3 as pm
+import pymc as pm
 import rnap_lib_data_sim as ds
 
-import theano.tensor as tt
+import aesara.tensor as tt
 #import theano
 #theano.config.exception_verbosity='high'
 #theano.config.compute_test_value='warn'
