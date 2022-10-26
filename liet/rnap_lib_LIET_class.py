@@ -402,11 +402,14 @@ class LIET:
 
             # CDF/logCDF components
             def _emg_cdf(x, mu, sigma, tau):
-                lcdf = pm.ExGaussian.dist(mu=mu,sigma=sigma, nu=tau).logcdf(x)
+                rv = pm.ExGaussian.dist(mu=mu,sigma=sigma, nu=tau)
+                lcdf = pm.logcdf(rv, x)
                 return tt.exp(lcdf)
             
             def _log_emg_cdf(x, mu, sigma, tau):
-                return pm.ExGaussian.dist(mu=mu,sigma=sigma, nu=tau).logcdf(x)
+                rv = pm.ExGaussian.dist(mu=mu,sigma=sigma, nu=tau)
+                lcdf = pm.logcdf(rv, x)
+                return lcdf
 
             def _norm_sf(x, mu, sigma):
                 arg = (x - mu) / (sigma * tt.sqrt(2.0))
