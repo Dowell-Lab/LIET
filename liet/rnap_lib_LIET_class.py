@@ -494,13 +494,13 @@ class LIET:
 
             # Convert Aesara log-prob func into pymc distribution variable
             E_pdf = pm.DensityDist.dist(
-                'E_pdf',
                 self._p['mL'],
                 self._p['sL'],
                 self._p['tI'],
                 self._p['mT'],
                 self._p['sT'],
-                logp=elong_logp
+                logp=elong_logp,
+                class_name='E_pdf'
             )
 #            E_pdf = pm.DensityDist.dist(class_name='E_pdf', logp=elong_logp)
             
