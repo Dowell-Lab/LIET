@@ -405,7 +405,7 @@ class LIET:
                 rv = pm.ExGaussian.dist(mu=mu,sigma=sigma, nu=tau)
                 lcdf = pm.logcdf(rv, x)
                 return tt.exp(lcdf)
-            
+
             def _log_emg_cdf(x, mu, sigma, tau):
                 rv = pm.ExGaussian.dist(mu=mu,sigma=sigma, nu=tau)
                 lcdf = pm.logcdf(rv, x)
@@ -421,7 +421,7 @@ class LIET:
 
             def elong_logp(x, mL, sL, tI, mT, sT):
                 # Compute norm factor by integrating over entire distribution
-                _n = 10 #number of stdevs for numerical normalization
+                _n = 5 #number of stdevs for numerical normalization
                 _min = tt.floor(tt.min([mL-_n*sL, mT-_n*sT]))
                 _max = tt.ceil(tt.max([mL+_n*np.sqrt(sL**2+tI**2), mT+_n*sT]))
 
