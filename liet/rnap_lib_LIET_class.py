@@ -435,7 +435,6 @@ class LIET:
 #                    self._p['mT'] + _n*self._p['sT']
 #                ]))
                 _x = tt.arange(_min, _max, dtype="int32")
-                print(len(_x))
 
                 _norm_array = (
                     _emg_cdf(_x, mu=mL, sigma=sL, tau=tI) 
