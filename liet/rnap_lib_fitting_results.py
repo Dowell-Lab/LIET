@@ -208,7 +208,7 @@ def posterior_stats(
     params = [e for e in posterior_samples.keys() if e[-1] != '0']
 
     # Mode computing function that uses guassian kde to smooth empirical dist
-    def kde_mode(samples, tol=1e-2):
+    def kde_mode(samples, tol=10):
         '''
         Computes the mode of the distribution after applying a guassian kde
         '''
