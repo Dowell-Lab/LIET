@@ -418,14 +418,20 @@ class LIET:
             def _log_norm_sf(x, mu, sigma):
                 return pm.distributions.dist_math.normal_lccdf(mu, sigma, x)
 
-
-            def elong_logp(x, mL, sL, tI, mT, sT):
+            def _elong_numeric_norm(mL, sL, tI, mT, sT):
                 # Compute norm factor by integrating over entire distribution
                 _n = 5 #number of stdevs for numerical normalization
                 _min = tt.floor(tt.min([mL-_n*sL, mT-_n*sT]))
                 _max = tt.ceil(tt.max([mL+_n*np.sqrt(sL**2+tI**2), mT+_n*sT]))
 
-#                _min = tt.floor(tt.min([
+                _x = tt.arange(_min, _max, dtype="int32")
+
+                _norm_array = (
+                    _emg_cdf(_x, mu=mL, sigma=sL, tau=tI) 
+                    *_norm_sf(_x, mu=mT, sigma=sT)
+                )
+
+                #                _min = tt.floor(tt.min([
 #                    self._p['mL'] - _n*self._p['sL'], 
 #                    self._p['mT'] - _n*self._p['sT']
 #                ]))
@@ -434,12 +440,7 @@ class LIET:
 #                    + self._p['tI']**2), 
 #                    self._p['mT'] + _n*self._p['sT']
 #                ]))
-                _x = tt.arange(_min, _max, dtype="int32")
 
-                _norm_array = (
-                    _emg_cdf(_x, mu=mL, sigma=sL, tau=tI) 
-                    *_norm_sf(_x, mu=mT, sigma=sT)
-                )
 #                _norm_array = (
 #                    _emg_cdf(
 #                        _x, 
@@ -454,6 +455,39 @@ class LIET:
 #                    )
 #                )
                 _log_norm_factor = tt.log(tt.sum(_norm_array))
+                return _log_norm_factor
+
+            # NOTE: There's an issue with precision in this calculation. The numpy proto-type is higher precision by about 10^15. Not sure if it's a dtype issue.
+            def _elong_analytic_norm(mL, sL, tI, mT, sT):
+                mL_val = pm.math.constant(mL, dtype='int64')
+                sL_val = pm.math.constant(sL, dtype='int64')
+                tI_val = pm.math.constant(tI, dtype='int64')
+                mT_val = pm.math.constant(mT, dtype='int64')
+                sT_val = pm.math.constant(sT, dtype='int64')
+
+                Delta = pm.math.abs(mT_val - mL_val)
+                sigma_square = pm.math.sqr(sL_val) + pm.math.sqr(sT_val)
+                sigma_sqrt = pm.math.sqrt(sigma_square)
+                Sigma = sigma_square / tI_val
+
+                log_Phi1 = pm.Normal.logcdf(Delta/sigma_sqrt, mu=0, sigma=1)
+                log_phi1 = pm.Normal.logp(Delta/sigma_sqrt, mu=0, sigma=1)
+                log_Phi2 = pm.Normal.logcdf((Delta-Sigma)/sigma_sqrt, 
+                                            mu=0, sigma=1)
+
+                term1 = pm.math.exp(pm.math.log(Delta) + log_Phi1)
+                term2 = pm.math.exp(pm.math.log(sigma_sqrt) + log_phi1)
+                term3 = pm.math.exp(pm.math.log(tI_val) + log_Phi1)
+                term4 = pm.math.exp(pm.math.log(tI_val)
+                                    -(Delta - Sigma/2)/tI_val + log_Phi2)
+
+                _log_norm_factor = pm.math.log(term1 + term2 - term3 + term4)
+                return _log_norm_factor
+
+
+            def elong_logp(x, mL, sL, tI, mT, sT):
+
+                _log_norm_factor = _elong_analytic_norm(mL, sL, tI, mT, sT)
 
                 # Unnormalized dist values (log(CDF*SF) = log(CDF) + log(SF))
                 _log_unscaled = (
