@@ -4,7 +4,7 @@ __credits__ = ['Jacob T. Stanley', 'Robin D. Dowell']
 __maintainer__ = 'Jacob T. Stanley'
 __email__ = 'jacob.stanley@colorado.edu'                                                                                                       
 #==============================================================================
-
+# TEST
 import numpy as np
 import scipy as sp
 import pymc as pm
