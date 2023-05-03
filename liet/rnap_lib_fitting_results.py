@@ -1,6 +1,6 @@
 import numpy as np
 import scipy as sp
-import pymc3 as pm
+import pymc as pm
 import time
 from collections import OrderedDict
 
@@ -200,14 +200,15 @@ def posterior_stats(
         post_stats : dict
             Dictionary containing the specified stats for each of the params.
     '''
-    # Sample approximation
-    posterior_samples = post_approx.sample(N)
+    # Sample approximation (convert arviz InferenceData obj to dict)
+    posterior_samples = post_approx.sample(N).to_dict()
+    posterior_samples = posterior_samples['posterior']
 
-    # Filter out transformed variable names
-    params = [e for e in posterior_samples.varnames if e[-2:] != '__']
+    # Filter out transformed variable names (those ending with '0')
+    params = [e for e in posterior_samples.keys() if e[-1] != '0']
 
     # Mode computing function that uses guassian kde to smooth empirical dist
-    def kde_mode(samples, tol=1e-2):
+    def kde_mode(samples, tol=10):
         '''
         Computes the mode of the distribution after applying a guassian kde
         '''
@@ -246,7 +247,7 @@ def posterior_stats(
     for p in params:
 
 #        try:
-        samps = posterior_samples[p][:]
+        samps = posterior_samples[p][0,:]
 
         if calc_mean:
             mean_val = np.mean(samps, axis=0)

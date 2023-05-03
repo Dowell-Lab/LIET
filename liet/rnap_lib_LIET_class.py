@@ -7,10 +7,10 @@ __email__ = 'jacob.stanley@colorado.edu'
 
 import numpy as np
 import scipy as sp
-import pymc3 as pm
+import pymc as pm
 import rnap_lib_data_sim as ds
 
-import theano.tensor as tt
+import aesara.tensor as tt
 #import theano
 #theano.config.exception_verbosity='high'
 #theano.config.compute_test_value='warn'
@@ -402,11 +402,14 @@ class LIET:
 
             # CDF/logCDF components
             def _emg_cdf(x, mu, sigma, tau):
-                lcdf = pm.ExGaussian.dist(mu=mu,sigma=sigma, nu=tau).logcdf(x)
+                rv = pm.ExGaussian.dist(mu=mu,sigma=sigma, nu=tau)
+                lcdf = pm.logcdf(rv, x)
                 return tt.exp(lcdf)
-            
+
             def _log_emg_cdf(x, mu, sigma, tau):
-                return pm.ExGaussian.dist(mu=mu,sigma=sigma, nu=tau).logcdf(x)
+                rv = pm.ExGaussian.dist(mu=mu,sigma=sigma, nu=tau)
+                lcdf = pm.logcdf(rv, x)
+                return lcdf
 
             def _norm_sf(x, mu, sigma):
                 arg = (x - mu) / (sigma * tt.sqrt(2.0))
@@ -416,61 +419,72 @@ class LIET:
                 return pm.distributions.dist_math.normal_lccdf(mu, sigma, x)
 
 
-            def elong_logp(x):
+            def elong_logp(x, mL, sL, tI, mT, sT):
                 # Compute norm factor by integrating over entire distribution
-                _n = 10 #number of stdevs for numerical normalization
-                _min = tt.floor(tt.min([
-                    self._p['mL'] - _n*self._p['sL'], 
-                    self._p['mT'] - _n*self._p['sT']
-                ]))
-                _max = tt.ceil(tt.max([
-                    self._p['mL'] + _n*np.sqrt(self._p['sL']**2 
-                    + self._p['tI']**2), 
-                    self._p['mT'] + _n*self._p['sT']
-                ]))
-                _x = tt.arange(_min, _max, dtype="int64")
+                _n = 5 #number of stdevs for numerical normalization
+                _min = tt.floor(tt.min([mL-_n*sL, mT-_n*sT]))
+                _max = tt.ceil(tt.max([mL+_n*np.sqrt(sL**2+tI**2), mT+_n*sT]))
+
+#                _min = tt.floor(tt.min([
+#                    self._p['mL'] - _n*self._p['sL'], 
+#                    self._p['mT'] - _n*self._p['sT']
+#                ]))
+#                _max = tt.ceil(tt.max([
+#                    self._p['mL'] + _n*np.sqrt(self._p['sL']**2 
+#                    + self._p['tI']**2), 
+#                    self._p['mT'] + _n*self._p['sT']
+#                ]))
+                _x = tt.arange(_min, _max, dtype="int32")
 
                 _norm_array = (
-                    _emg_cdf(
-                        _x, 
-                        mu=self._p['mL'], 
-                        sigma=self._p['sL'], 
-                        tau=self._p['tI']
-                    )
-                    * _norm_sf(
-                        _x, 
-                        mu=self._p['mT'], 
-                        sigma=self._p['sT']
-                    )
+                    _emg_cdf(_x, mu=mL, sigma=sL, tau=tI) 
+                    *_norm_sf(_x, mu=mT, sigma=sT)
                 )
+#                _norm_array = (
+#                    _emg_cdf(
+#                        _x, 
+#                        mu=self._p['mL'], 
+#                        sigma=self._p['sL'], 
+#                        tau=self._p['tI']
+#                    )
+#                    * _norm_sf(
+#                        _x, 
+#                        mu=self._p['mT'], 
+#                        sigma=self._p['sT']
+#                    )
+#                )
                 _log_norm_factor = tt.log(tt.sum(_norm_array))
 
                 # Unnormalized dist values (log(CDF*SF) = log(CDF) + log(SF))
                 _log_unscaled = (
-                    _log_emg_cdf(
-                        x, 
-                        mu=self._p['mL'], 
-                        sigma=self._p['sL'], 
-                        tau=self._p['tI']
-                    ) 
-                    + _log_norm_sf(
-                        x, 
-                        mu=self._p['mT'],
-                        sigma=self._p['sT']
-                    )
+                    _log_emg_cdf(x, mu=mL, sigma=sL, tau=tI)
+                    +_log_norm_sf(x, mu=mT, sigma=sT)
                 )
+#                _log_unscaled = (
+#                    _log_emg_cdf(
+#                        x, 
+#                        mu=self._p['mL'], 
+#                        sigma=self._p['sL'], 
+#                        tau=self._p['tI']
+#                    ) 
+#                    + _log_norm_sf(
+#                        x, 
+#                        mu=self._p['mT'],
+#                        sigma=self._p['sT']
+#                    )
+#                )
 
                 # Normalize distribution in logscale
-#                log_pdf = _log_unscaled - _log_norm_factor
+                log_pdf = _log_unscaled - _log_norm_factor
                                                                             # NOT SURE IF I NEED THIS BOUNDING
-                log_pdf = pm.distributions.dist_math.bound(_log_unscaled - _log_norm_factor, self._p['mL'] < self._p['mT'])
+#                log_pdf = pm.distributions.dist_math.bound(_log_unscaled - _log_norm_factor, self._p['mL'] < self._p['mT'])
 
                 return log_pdf
                 #==============================================================
             # Debugging print statement (can remove later)
 #            mL_print = tt.printing.Print('mL')(self._p['mL'])
 
-            # Distribution for the Loading/Initiation phase (native to pymc3)
+            # Distribution for the Loading/Initiation phase (native to pymc)
             LI_pdf = pm.ExGaussian.dist(
 #                mu=mL_print,
                 mu=self._p['mL'], 
@@ -478,10 +492,19 @@ class LIET:
                 nu=self._p['tI']
             )
 
-            # Convert Theano log-prob func into pymc3 distribution variable
-            E_pdf = pm.DensityDist.dist(elong_logp)
+            # Convert Aesara log-prob func into pymc distribution variable
+            E_pdf = pm.DensityDist.dist(
+                self._p['mL'],
+                self._p['sL'],
+                self._p['tI'],
+                self._p['mT'],
+                self._p['sT'],
+                logp=elong_logp,
+                class_name='E_pdf'
+            )
+#            E_pdf = pm.DensityDist.dist(class_name='E_pdf', logp=elong_logp)
             
-            # Distribution for the Termination phase (native to pymc3)
+            # Distribution for the Termination phase (native to pymc)
             T_pdf = pm.Normal.dist(mu=self._p['mT'], sigma=self._p['sT'])
 
         # Strand data dict used to reference self.data for 'observed' kwargs
