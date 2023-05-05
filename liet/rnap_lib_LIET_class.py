@@ -10,7 +10,7 @@ import scipy as sp
 import pymc as pm
 import rnap_lib_data_sim as ds
 
-import aesara.tensor as tt
+import pytensor.tensor as tt
 #import theano
 #theano.config.exception_verbosity='high'
 #theano.config.compute_test_value='warn'
