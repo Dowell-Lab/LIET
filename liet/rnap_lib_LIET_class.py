@@ -459,16 +459,16 @@ class LIET:
 
             # NOTE: There's an issue with precision in this calculation. The numpy proto-type is higher precision by about 10^15. Not sure if it's a dtype issue.
             def _elong_analytic_norm(mL, sL, tI, mT, sT):
-                mL_val = pm.math.constant(mL, dtype='int64')
-                sL_val = pm.math.constant(sL, dtype='int64')
-                tI_val = pm.math.constant(tI, dtype='int64')
-                mT_val = pm.math.constant(mT, dtype='int64')
-                sT_val = pm.math.constant(sT, dtype='int64')
+#                mL_val = pm.math.constant(mL, dtype='int64')
+#                sL_val = pm.math.constant(sL, dtype='int64')
+#                tI_val = pm.math.constant(tI, dtype='int64')
+#                mT_val = pm.math.constant(mT, dtype='int64')
+#                sT_val = pm.math.constant(sT, dtype='int64')
 
-                Delta = pm.math.abs(mT_val - mL_val)
-                sigma_square = pm.math.sqr(sL_val) + pm.math.sqr(sT_val)
+                Delta = pm.math.abs(mT - mL)
+                sigma_square = pm.math.sqr(sL) + pm.math.sqr(sT)
                 sigma_sqrt = pm.math.sqrt(sigma_square)
-                Sigma = sigma_square / tI_val
+                Sigma = sigma_square / tI
 
                 log_Phi1 = pm.Normal.logcdf(Delta/sigma_sqrt, mu=0, sigma=1)
                 log_phi1 = pm.Normal.logp(Delta/sigma_sqrt, mu=0, sigma=1)
@@ -477,9 +477,9 @@ class LIET:
 
                 term1 = pm.math.exp(pm.math.log(Delta) + log_Phi1)
                 term2 = pm.math.exp(pm.math.log(sigma_sqrt) + log_phi1)
-                term3 = pm.math.exp(pm.math.log(tI_val) + log_Phi1)
-                term4 = pm.math.exp(pm.math.log(tI_val)
-                                    -(Delta - Sigma/2)/tI_val + log_Phi2)
+                term3 = pm.math.exp(pm.math.log(tI) + log_Phi1)
+                term4 = pm.math.exp(pm.math.log(tI)
+                                    -(Delta - Sigma/2)/tI + log_Phi2)
 
                 _log_norm_factor = pm.math.log(term1 + term2 - term3 + term4)
                 return _log_norm_factor
