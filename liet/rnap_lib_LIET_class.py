@@ -557,7 +557,7 @@ class LIET:
 #                self.data['pos_reads'].max(), 
 #                self.data['neg_reads'].max()
 #            )
-            if self.data['annot_dict']['strand'] == +1:
+            if self.data['annot']['strand'] == +1:
                 sense_xmin = self.data['coord'].min()
                 sense_xmax = self.data['coord'].max()
             else:
@@ -601,7 +601,7 @@ class LIET:
                 
                 # This is confusing, but it's because of the coordinate transform that the max/min change.
                 # This assumes range shift has occurred.
-                if self.data['annot_dict']['strand'] == -1:
+                if self.data['annot']['strand'] == -1:
                     anti_xmin = self.data['coord'].min()
                     anti_xmax = self.data['coord'].max()
                 else:
