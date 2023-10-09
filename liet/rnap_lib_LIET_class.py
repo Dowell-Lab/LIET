@@ -549,16 +549,21 @@ class LIET:
         # Define sense-strand full model (with or without background)
         if background == True and self.priors['w']['alpha_B'] != 0:
             
-            xmin = -1 + min(
-                self.data['pos_reads'].min(), 
-                self.data['neg_reads'].min()
-            )
-            xmax = 1 + max(
-                self.data['pos_reads'].max(), 
-                self.data['neg_reads'].max()
-            )
+#            xmin = -1 + min(
+#                self.data['pos_reads'].min(), 
+#                self.data['neg_reads'].min()
+#            )
+#            xmax = 1 + max(
+#                self.data['pos_reads'].max(), 
+#                self.data['neg_reads'].max()
+#            )
+
+            sense_xmin = self.data['coord'].min()
+            sense_xmax = self.data['coord'].max()
+            print(f"sense min,max: {sense_xmin}, {sense_xmax}")
+            
             with self.model:
-                back_pdf = pm.Uniform.dist(lower=xmin, upper=xmax)
+                back_pdf = pm.Uniform.dist(lower=sense_xmin, upper=sense_xmax)
 
             components = [LI_pdf, E_pdf, T_pdf, back_pdf]
         else:
@@ -590,13 +595,22 @@ class LIET:
                 t_a = self._p['tI']
             
             if background == True and self.priors['w']['alpha_B'] != 0:
+                
+                # This is confusing, but it's because of the coordinate transform that the max/min change.
+                # This assumes range shift has occurred.
+                anti_xmin = -self.data['coord'].max()
+                anti_xmax = -self.data['coord'].min()
+                print(f"anti min,max: {anti_xmin}, {anti_xmax}")
+
+                back_a_pdf = pm.Uniform.dist(lower=anti_xmin, upper=anti_xmax)
+
                 with self.model:
                     LI_a_pdf = pm.ExGaussian.dist(
                         mu=m_a, 
                         sigma=s_a, 
                         nu=t_a
                     )
-                    components = [LI_a_pdf, back_pdf]
+                    components = [LI_a_pdf, back_a_pdf]
 
                 w_a = [self.priors['w']['alpha_LI'], 
                     self.priors['w']['alpha_B']]
