@@ -557,9 +557,12 @@ class LIET:
 #                self.data['pos_reads'].max(), 
 #                self.data['neg_reads'].max()
 #            )
-
-            sense_xmin = self.data['coord'].min()
-            sense_xmax = self.data['coord'].max()
+            if self.annot_dict['strand'] == +1:
+                sense_xmin = self.data['coord'].min()
+                sense_xmax = self.data['coord'].max()
+            else:
+                sense_xmin = -self.data['coord'].max()
+                sense_xmax = -self.data['coord'].min()
             print(f"sense min,max: {sense_xmin}, {sense_xmax}")
             
             with self.model:
@@ -598,8 +601,13 @@ class LIET:
                 
                 # This is confusing, but it's because of the coordinate transform that the max/min change.
                 # This assumes range shift has occurred.
-                anti_xmin = -self.data['coord'].max()
-                anti_xmax = -self.data['coord'].min()
+                if self.annot_dict['strand'] == -1:
+                    anti_xmin = self.data['coord'].min()
+                    anti_xmax = self.data['coord'].max()
+                else:
+                    anti_xmin = -self.data['coord'].max()
+                    anti_xmax = -self.data['coord'].min()
+                    
                 print(f"anti min,max: {anti_xmin}, {anti_xmax}")
 
                 back_a_pdf = pm.Uniform.dist(lower=anti_xmin, upper=anti_xmax)
