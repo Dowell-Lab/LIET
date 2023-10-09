@@ -362,7 +362,7 @@ def gene_model(
                     sig0_n, 
                     tau0_n, 
                     size=Nli_n, 
-                    seed=seed
+                    seed=seed+1                                                # THE SEED SHOULD BE DIFFERENT BETWEEN +/- STRANDS, TO ELIMINATE POSSIBILITY OF GENERATING IDENTICAL DATA ON BOTH STRANDS. THIS IS CURRENTLY A HACK!!
                 )
                 rvs_n = np.concatenate([rvs_n, invert(li_rvs_n, mu0_n)])
 
@@ -376,7 +376,7 @@ def gene_model(
                     mu1_n, 
                     sig1_n, 
                     size=Ne_n, 
-                    seed=seed
+                    seed=seed+1                                                # THE SEED SHOULD BE DIFFERENT BETWEEN +/- STRANDS, TO ELIMINATE POSSIBILITY OF GENERATING IDENTICAL DATA ON BOTH STRANDS. THIS IS CURRENTLY A HACK!!
                 )
                 rvs_n = np.concatenate([rvs_n, e_rvs_n])
 
@@ -386,12 +386,12 @@ def gene_model(
                     mu1_n, 
                     sig1_n, 
                     size=Nt_n, 
-                    seed=seed
+                    seed=seed+1                                                # THE SEED SHOULD BE DIFFERENT BETWEEN +/- STRANDS, TO ELIMINATE POSSIBILITY OF GENERATING IDENTICAL DATA ON BOTH STRANDS. THIS IS CURRENTLY A HACK!!
                 )
                 rvs_n = np.concatenate([rvs_n, invert(t_rvs_n, mu1_n)])
 
             if Nb_n != 0.0:
-                back_rvs_n = background_rvs(xvals, size=Nb_n, seed=seed)
+                back_rvs_n = background_rvs(xvals, size=Nb_n, seed=seed+1)     # THE SEED SHOULD BE DIFFERENT BETWEEN +/- STRANDS, TO ELIMINATE POSSIBILITY OF GENERATING IDENTICAL DATA ON BOTH STRANDS. THIS IS CURRENTLY A HACK!!
                 rvs_n = np.concatenate([rvs_n, back_rvs_n])
 
             rvs_n = np.array(np.sort(rvs_n), dtype='int32')
