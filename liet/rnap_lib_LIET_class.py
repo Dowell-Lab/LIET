@@ -557,12 +557,13 @@ class LIET:
 #                self.data['pos_reads'].max(), 
 #                self.data['neg_reads'].max()
 #            )
+# NOTE: Currently this construction for defining background range will brack the fractional pad feature!!!
             if self.data['annot']['strand'] == +1:
-                sense_xmin = self.data['coord'].min()
-                sense_xmax = self.data['coord'].max()
+                sense_xmin = self.data['coord'].min() - self.data['pad'][0]
+                sense_xmax = self.data['coord'].max() + self.data['pad'][1]
             else:
-                sense_xmin = -self.data['coord'].max()
-                sense_xmax = -self.data['coord'].min()
+                sense_xmin = -self.data['coord'].max() - self.data['pad'][0]
+                sense_xmax = -self.data['coord'].min() + self.data['pad'][0]
             print(f"sense min,max: {sense_xmin}, {sense_xmax}")
             
             with self.model:
@@ -600,13 +601,13 @@ class LIET:
             if background == True and self.priors['w']['alpha_B'] != 0:
                 
                 # This is confusing, but it's because of the coordinate transform that the max/min change.
-                # This assumes range shift has occurred.
+                # This assumes range shift has occurred. (this is confusing)
                 if self.data['annot']['strand'] == -1:
-                    anti_xmin = self.data['coord'].min()
-                    anti_xmax = self.data['coord'].max()
+                    anti_xmin = self.data['coord'].min() - self.data['pad'][1]
+                    anti_xmax = self.data['coord'].max() + self.data['pad'][0]
                 else:
-                    anti_xmin = -self.data['coord'].max()
-                    anti_xmax = -self.data['coord'].min()
+                    anti_xmin = -self.data['coord'].max() - self.data['pad'][1]
+                    anti_xmax = -self.data['coord'].min() + self.data['pad'][0]
                     
                 print(f"anti min,max: {anti_xmin}, {anti_xmax}")
 
