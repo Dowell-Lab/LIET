@@ -3,7 +3,31 @@ import numpy as np
 import copy
 from collections import defaultdict
 
-# GENE ANNOTATION HANDLING ====================================================
+# GENE ANNOTATION AND PAD FILE HANDLING =======================================
+
+def pad_file_loader(pad_file):
+    '''
+    This function is used for when a gene padding file is specified in place 
+    of using the single 5'/3' padding tuple. This allows for each gene to have 
+    its own unique set of padding lengths. This function is utilized in the 
+    annot_BED6_loader() function.
+
+    File format: "geneID<TAB>5'pad,3'pad"
+
+    Gene ID's must include all those from the annotation file.
+    '''
+    pad_dict = {}
+
+    with open(pad_file, 'r') as pf:
+
+        for gene_line in pf:
+            gid, pad = gene_line.strip().split('\t')
+            pad = tuple(int(i) for i in pad.strip().split(','))
+
+            pad_dict[gid] = pad
+
+    return pad_dict
+
 
 def annotation(chrom=None, start=None, stop=None, strand=None):
     
