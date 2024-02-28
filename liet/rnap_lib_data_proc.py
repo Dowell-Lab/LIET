@@ -216,7 +216,8 @@ def config_loader(config_file):
             elif (pname == 'ANNOTATION' or 
                 pname == 'BEDGRAPH_POS' or
                 pname == 'BEDGRAPH_NEG' or
-                pname == 'RESULTS'):
+                pname == 'RESULTS' or
+                pname == 'PAD_FILE'):
                 config[category][pname] = pval
             # MODEL
             elif (pname == 'ANTISENSE' or 
