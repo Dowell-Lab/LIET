@@ -222,9 +222,16 @@ def main():
 
     # Parse annotation file
     annot_file = config['FILES']['ANNOTATION']
-#    annot_dict, pad_dict = dp.annot_loader(annot_file)                         # This old annotation loader is not compatible with the BED6 format I'm using now, output from Mary's hermits script
-    pad5, pad3 = config['DATA_PROC']['PAD']
-    annot_dict, pad_dict = dp.annot_BED6_loader(annot_file, pad5, pad3)
+    annot_dict, pad_dict = dp.annot_BED6_loader(annot_file)
+
+    # Extract all gene ID's from annotation dictionary
+    gene_id_list = [gid for gid in rois.values() 
+                    for ch, rois in annot_dict.items()]
+
+    # Compute padding dictionary from file and default pads
+    default_pads = config['DATA_PROC']['PAD']  # (5'pad, 3'pad)
+    pad_file = config['FILES']['PAD_FILE']
+    pad_dict = pad_dict_generator(gene_id_list, default_pads, pad_file)
 
     # Open bedgraph files and load reads
     bgp_file = config['FILES']['BEDGRAPH_POS']
