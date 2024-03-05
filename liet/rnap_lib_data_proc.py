@@ -29,6 +29,51 @@ def pad_file_loader(pad_file):
     return pad_dict
 
 
+def pad_dict_generator(gene_id_list, default_pad, pad_file=None):
+    '''
+    This function creates the padding dictionary using two sources: 1) the pad 
+    file (optional) which contains gene-specific pad values for both ends of 
+    the gene and 2) the default padding values specified in the LIET config 
+    file.
+
+    Parameters
+    ----------
+    gene_id_list : list
+        List of gene ID's that are read in from the annotation file.
+
+    default_pad : tuple
+        Tuple containing a 5' and 3' padding value (both integers). These 
+        values come from the config file (param PAD)
+
+    pad_file : string
+        Full path to the padding file
+
+
+    Returns
+    -------
+    gene_pads : dict
+        The dictionary containing (5' pad, 3' pad) tuples for each of the 
+        gene ID's input via the annotation file. 
+        Format: {'gene ID': (pad5, pad3), ...}
+    '''
+    if pad_file is None:
+        gene_pads = {gid: default_pad for gid in gene_id_list}
+
+    else:
+        pads_from_file = pad_file_loader(pad_file)
+        gene_pads = {}
+
+        for gid in gene_id_list:
+            # Gene pad from file
+            if gid in pads_from_file.keys():
+                gene_pads[gid] = pads_from_file[gid]
+            # Gene pad default
+            else:
+                gene_pads[gid] = default_pad
+
+    return gene_pads
+
+
 def annotation(chrom=None, start=None, stop=None, strand=None):
     
     strand_dict = {'+': 1, '-': -1}
