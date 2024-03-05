@@ -48,7 +48,6 @@ def pad_dict_generator(gene_id_list, default_pad, pad_file=None):
     pad_file : string
         Full path to the padding file
 
-
     Returns
     -------
     gene_pads : dict
@@ -87,18 +86,30 @@ def annotation(chrom=None, start=None, stop=None, strand=None):
     return out
 
 
-def annot_BED6_loader(annot_file, pad5, pad3):
+def annot_BED6_loader(annot_file):
     '''
     Loads annotations from BED6 file into a dictionary and then sorts 
     them by genomic coordinate and strand. Returns sorted dict of form:
     annot_sorted: {'chr#': {(start, stop, strand): gene_id, ...}, ...}
-    pad: {gene_id: (pad5, pad3), ... }
     
     Only uses the following fields from the BED6 formatted input: 
     chr (0), start (1), stop (2), name (3), strand (5)
+
+    Parameters
+    ----------
+    annot_file : string
+        Full path to annotation file containing gene ID's and annotations
+        to which LIET is to be applied. File format: BED6, i.e. 
+        (tab delimited: chr, start, stop, gene_id, score, strand)
+
+    Returns
+    -------
+    annot_sorted : dict
+        Annotation dictionary sorted by chromosome and region with gene ID 
+        values. Format: {'chrom': {(start, stop, strand): gene_id, ...}, ...}
+
     '''
     strand_dict = {'+': 1, '-': -1}
-    pad = {}
 
     # Initialize annotation dictionary with chrom ID's in annot file
     with open(annot_file, 'r') as af:
@@ -127,8 +138,6 @@ def annot_BED6_loader(annot_file, pad5, pad3):
                 strnd = strand_dict[line[5]]
                 annot[chrom][(start, stop, strnd)] = id
 
-                pad[id] = (int(pad5), int(pad3))
-
             except KeyError:
                 raise KeyError(f"One or both keys {chrom} and {id} do not"
                     "exist.")
@@ -144,7 +153,7 @@ def annot_BED6_loader(annot_file, pad5, pad3):
         else:
             continue
     
-    return annot_sorted, pad
+    return annot_sorted
 
 
 def annot_loader(annot_file):
