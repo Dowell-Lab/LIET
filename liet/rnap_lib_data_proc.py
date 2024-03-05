@@ -18,18 +18,30 @@ def pad_file_loader(pad_file):
     '''
     pad_dict = {}
 
-    with open(pad_file, 'r') as pf:
+    try:
+        with open(pad_file, 'r') as pf:
 
-        for gene_line in pf:
-            gid, pad = gene_line.strip().split('\t')
-            pad = tuple(int(i) for i in pad.strip().split(','))
+            for gene_line in pf:
+                gid, pad = gene_line.strip().split('\t')
+                pad = tuple(int(i) for i in pad.strip().split(','))
+                
+                if len(pad) != 2:
+                    raise ValueError
 
-            pad_dict[gid] = pad
+                pad_dict[gid] = pad
+                
+    except FileNotFoundError:
+        print(f"FileNotFoundError: Padding file does not exist --- "
+            "'{pad_file}'")
+    except ValueError:
+        print(f"ValueError: Improper format in padding file "
+        "'{pad_file}' --- line: '{gene_line}'")
+        print("Correct line format: '<gene_id>TAB<5'pad int>,<3'pad int>'")
 
     return pad_dict
 
 
-def pad_dict_generator(gene_id_list, default_pad, pad_file=None):
+def pad_dict_generator(gene_id_list, default_pad, pad_file):
     '''
     This function creates the padding dictionary using two sources: 1) the pad 
     file (optional) which contains gene-specific pad values for both ends of 
@@ -55,7 +67,8 @@ def pad_dict_generator(gene_id_list, default_pad, pad_file=None):
         gene ID's input via the annotation file. 
         Format: {'gene ID': (pad5, pad3), ...}
     '''
-    if pad_file is None:
+    if pad_file is '' or 'None' or None:
+        print('WARNING: A padding file was not provided.')
         gene_pads = {gid: default_pad for gid in gene_id_list}
 
     else:
@@ -245,7 +258,7 @@ def config_loader(config_file):
     prior_names = ['mL', 'sL', 'tI', 'mT', 'sT', 'w', 'mL_a', 'sL_a', 'tI_a']
 
     config = {
-        'FILES': {'ANNOTATION':'', 'BEDGRAPH':'', 'RESULTS':''},
+        'FILES': {'ANNOTATION':'', 'BEDGRAPH':'', 'RESULTS':'', 'PAD_FILE':''},
         'MODEL': {'ANTISENSE':None, 'BACKGROUND':None, 'FRACPRIORS':None}, 
         'PRIORS': {'mL':None, 'sL':None, 'tI':None, 'mT':None, 'sT':None,
             'mL_a':None, 'sL_a':None, 'tI_a':None, 'w':None}, 
