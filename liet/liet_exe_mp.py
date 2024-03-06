@@ -222,7 +222,7 @@ def main():
 
     # Parse annotation file
     annot_file = config['FILES']['ANNOTATION']
-    annot_dict, pad_dict = dp.annot_BED6_loader(annot_file)
+    annot_dict = dp.annot_BED6_loader(annot_file)
 
     # Extract all gene ID's from annotation dictionary
     gene_id_list = [gid for gid in rois.values() 
