@@ -67,7 +67,7 @@ def pad_dict_generator(gene_id_list, default_pad, pad_file):
         gene ID's input via the annotation file. 
         Format: {'gene ID': (pad5, pad3), ...}
     '''
-    if pad_file is '' or 'None' or None:
+    if pad_file in ['', 'None', None]:
         print('WARNING: A padding file was not provided.')
         gene_pads = {gid: default_pad for gid in gene_id_list}
         print(f"PAD FILE: {pad_file}")
