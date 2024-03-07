@@ -231,7 +231,7 @@ def main():
     # Compute padding dictionary from file and default pads
     default_pads = config['DATA_PROC']['PAD']  # (5'pad, 3'pad)
     pad_file = config['FILES']['PAD_FILE']
-    pad_dict = pad_dict_generator(gene_id_list, default_pads, pad_file)
+    pad_dict = dp.pad_dict_generator(gene_id_list, default_pads, pad_file)
 
     # Open bedgraph files and load reads
     bgp_file = config['FILES']['BEDGRAPH_POS']
