@@ -225,8 +225,8 @@ def main():
     annot_dict = dp.annot_BED6_loader(annot_file)
 
     # Extract all gene ID's from annotation dictionary
-    gene_id_list = [gid for gid in rois.values() 
-                    for ch, rois in annot_dict.items()]
+    gene_id_list = [gid for ch, rois in annot_dict.items() 
+                    for gid in rois.values() ]
 
     # Compute padding dictionary from file and default pads
     default_pads = config['DATA_PROC']['PAD']  # (5'pad, 3'pad)
