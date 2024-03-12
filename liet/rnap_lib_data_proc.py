@@ -81,7 +81,7 @@ def pad_dict_generator(gene_id_list, default_pad, pad_file):
                 gene_pads[gid] = pads_from_file[gid]
             # Gene pad default
             else:
-                gene_pads[gid] = default_pad
+                gene_pads[gid] = tuple(default_pad)
 
     for gid, pad in gene_pads.items():
         print(gid, pad)
