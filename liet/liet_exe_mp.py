@@ -14,6 +14,76 @@ import rnap_lib_fitting_results as fr
 import rnap_lib_plotting as pl
 
 
+# Input processing function (unlike fit_routine() this is not paralellized)
+def input_processing(config_file):
+    '''
+    Using the config file, this function generates the reads and annotations 
+    dictionaries over which the fit routine is parallelized. The reads/annots
+    outputs are filtered for coverage.
+
+    Parameters
+    ----------
+    config_file : string
+        Full path to LIET config file.
+
+    Returns
+    -------
+    config : dict
+        Contains all the input data from the config file.
+
+    pad_dict : dict
+        Contains 5' and 3' end padding lengths for each input gene. These are
+        not the default values. Those are contained in the config file.
+        Format: {'gene ID': (pad5, pad3), ...}
+
+    reads_dict : dict
+        Dictionary containing both the positive and negative strand read 
+        counts for each gene in the annotations. Read objects are Counter-like 
+        dictionaries.
+        Format: {'gene_ID': (preads, nreads), ...}
+
+    annot_dict : dict
+        Contains the chrom/start/stop/strand for each input gene. Sorted by 
+        chromosome and start/stop values.
+        Format: {'chrom': {(start, stop, strand): gene_id, ...}, ...}
+    
+    filter_log : dict
+        Dictionary containing the coverage values for those genes which have 
+        been filtered out due to coverage filtering.
+        Format: {"gene_ID": "<log string with sense/antisense counts>", ...}
+    '''
+    # Load config (contents: FILES, MODEL, PRIORS, DATA_PROC, FITTING, RESULTS)
+    config = dp.config_loader(config_file)
+
+    # Parse annotation file
+    annot_file = config['FILES']['ANNOTATION']
+    annot_dict = dp.annot_BED6_loader(annot_file)
+
+    # Extract all gene ID's from annotation dictionary
+    gene_id_list = [gid for ch, rois in annot_dict.items() 
+                    for gid in rois.values() ]
+
+    # Compute padding dictionary from file and default pads
+    default_pads = config['DATA_PROC']['PAD']  # (5'pad, 3'pad)
+    pad_file = config['FILES']['PAD_FILE']
+    pad_dict = dp.pad_dict_generator(gene_id_list, default_pads, pad_file)
+
+    # Open bedgraph files and load reads
+    bgp_file = config['FILES']['BEDGRAPH_POS']
+    bgn_file = config['FILES']['BEDGRAPH_NEG']
+    reads_dict = dp.bedgraph_loader(bgp_file, bgn_file, annot_dict, pad_dict)
+
+    # Filter out genes with zero/low coverage
+    if config['DATA_PROC']['COV_THRESHOLDS']:
+        cov_thresh = config['DATA_PROC']['COV_THRESHOLDS']
+    else:
+        cov_thresh = (0, 0)
+    filtered = dp.cov_filter(reads_dict, annot_dict, thresholds=cov_thresh)
+    reads_dict, annot_dict, filter_log = filtered
+
+    return config, pad_dict, reads_dict, annot_dict, filter_log
+
+
 # Parallelizable function that performs all the fitting
 def fit_routine(fit_instance, config, pad_dict):
     
@@ -127,8 +197,8 @@ def fit_routine(fit_instance, config, pad_dict):
     # Evaluate whether or not to refit 
     # Run refit if convergence criteria not met
     ## ============================================================
-    #                print("Summarizing post...")
-        # Summarize posteriors
+    # print("Summarizing post...")
+    # Summarize posteriors
     try:
         post_stats = fr.posterior_stats(
             fit['approx'],
@@ -196,6 +266,7 @@ def fit_routine(fit_instance, config, pad_dict):
     return {annot: return_dict}
 
 
+### MAIN FUNCTION #############################################################
 def main():
 
     ## SLURM INFO =============================================================
@@ -216,37 +287,41 @@ def main():
 
     ## PROCESS INPUTS =========================================================
 
-    # Load config (contents: FILES, MODEL, PRIORS, DATA_PROC, FITTING, RESULTS)
-    #config_file = "C:\\Users\\Jacob\\Dropbox\\0DOWELL\\rnap_model\\LIET\\test_config.txt"
-    config = dp.config_loader(config_file)
+    inputs = input_processing(config_file)
+    config, pad_dict, reads_dict, annot_dict, filter_log = inputs
 
-    # Parse annotation file
-    annot_file = config['FILES']['ANNOTATION']
-    annot_dict = dp.annot_BED6_loader(annot_file)
+    # # Load config (contents: FILES, MODEL, PRIORS, DATA_PROC, FITTING, RESULTS)
+    # #config_file = "C:\\Users\\Jacob\\Dropbox\\0DOWELL\\rnap_model\\LIET\\test_config.txt"
+    # config = dp.config_loader(config_file)
 
-    # Extract all gene ID's from annotation dictionary
-    gene_id_list = [gid for ch, rois in annot_dict.items() 
-                    for gid in rois.values() ]
+    # # Parse annotation file
+    # annot_file = config['FILES']['ANNOTATION']
+    # annot_dict = dp.annot_BED6_loader(annot_file)
 
-    # Compute padding dictionary from file and default pads
-    default_pads = config['DATA_PROC']['PAD']  # (5'pad, 3'pad)
-    pad_file = config['FILES']['PAD_FILE']
-    pad_dict = dp.pad_dict_generator(gene_id_list, default_pads, pad_file)
+    # # Extract all gene ID's from annotation dictionary
+    # gene_id_list = [gid for ch, rois in annot_dict.items() 
+    #                 for gid in rois.values() ]
 
-    # Open bedgraph files and load reads
-    bgp_file = config['FILES']['BEDGRAPH_POS']
-    bgn_file = config['FILES']['BEDGRAPH_NEG']
-    reads_dict = dp.bedgraph_loader(bgp_file, bgn_file, annot_dict, pad_dict)
+    # # Compute padding dictionary from file and default pads
+    # default_pads = config['DATA_PROC']['PAD']  # (5'pad, 3'pad)
+    # pad_file = config['FILES']['PAD_FILE']
+    # pad_dict = dp.pad_dict_generator(gene_id_list, default_pads, pad_file)
 
-    # Filter out genes with zero/low coverage
-    if config['DATA_PROC']['COV_THRESHOLDS']:
-        cov_thresh = config['DATA_PROC']['COV_THRESHOLDS']
-    else:
-        cov_thresh = (0, 0)
-    filtered = dp.cov_filter(reads_dict, annot_dict, thresholds=cov_thresh)
-    reads_dict, annot_dict, filter_log = filtered
+    # # Open bedgraph files and load reads
+    # bgp_file = config['FILES']['BEDGRAPH_POS']
+    # bgn_file = config['FILES']['BEDGRAPH_NEG']
+    # reads_dict = dp.bedgraph_loader(bgp_file, bgn_file, annot_dict, pad_dict)
 
-    print(f"RD: {reads_dict.keys()}")
+    # # Filter out genes with zero/low coverage
+    # if config['DATA_PROC']['COV_THRESHOLDS']:
+    #     cov_thresh = config['DATA_PROC']['COV_THRESHOLDS']
+    # else:
+    #     cov_thresh = (0, 0)
+    # filtered = dp.cov_filter(reads_dict, annot_dict, thresholds=cov_thresh)
+    # reads_dict, annot_dict, filter_log = filtered
+
+    print(f"RD: {list(reads_dict.keys())}")
+    
     # Combine annot_dict and reads_dict for parallelization input
     mpargs = {
         (ch, a, gid) : reads_dict[gid] 
