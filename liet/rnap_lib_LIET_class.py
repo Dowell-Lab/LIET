@@ -610,10 +610,15 @@ class LIET:
                     anti_xmax = -self.data['coord'].min() + self.data['pad'][0]
                     
                 print(f"anti min,max: {anti_xmin}, {anti_xmax}")
-
-                back_a_pdf = pm.Uniform.dist(lower=anti_xmin, upper=anti_xmax)
-
+                
                 with self.model:
+                    # Anti-sense background component
+                    back_a_pdf = pm.Uniform.dist(
+                        lower=anti_xmin, 
+                        upper=anti_xmax
+                    )
+
+                    # Anti-sense LI component
                     LI_a_pdf = pm.ExGaussian.dist(
                         mu=m_a, 
                         sigma=s_a, 
@@ -638,7 +643,7 @@ class LIET:
                 with self.model:
                     LIET_a_pdf = pm.ExGaussian(
                         'LIET_a_pdf',
-                        mu=self.m_a,
+                        mu=m_a,
                         sigma=s_a,
                         nu=t_a,
                         observed=self.data[antisense_reads]
