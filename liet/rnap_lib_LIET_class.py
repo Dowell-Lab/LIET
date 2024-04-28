@@ -138,6 +138,9 @@ class LIET:
         pad=0,
         shift=True,
     ):
+        # Store the absolute, padded coordinate range 
+        self.data['abs_coord_range'] = (coord.min(), coord.max())
+
         start = self.data['annot']['start']
         stop = self.data['annot']['stop']
         strand = self.data['annot']['strand']
@@ -148,13 +151,29 @@ class LIET:
                 coord = np.array(coord) - start
                 pos_reads = np.array(pos_reads) - start
                 neg_reads = (np.array(neg_reads) - start) * (-1)               # This section still needs to be evaluated for correctness.
-                neg_reads = np.flip(neg_reads, axis=0)
+                neg_reads = np.flip(neg_reads, axis=0)                         # I checked it and I think it's correct (4/28/24). Need to clean up dev comments.
+
+                # Calculate the strand specfic ranges after shifting
+                # These are used for defining the background Uniform components
+                pstart = coord.min()
+                pstop = coord.max()
+                nstart = (-1) * pstop
+                nstop = (-1) * pstart
+
             elif strand == -1:
                 coord = (np.array(coord) - stop) * (-1)
                 coord = np.flip(coord, axis=0)
                 pos_reads = np.array(pos_reads) - stop
                 neg_reads = (np.array(neg_reads) - stop) * (-1)
                 neg_reads = np.flip(neg_reads, axis=0)
+
+                # Calculate the strand specfic ranges after shifting
+                nstart = coord.min()
+                nstop = coord.max()
+                pstart = (-1) * nstop
+                pstop = (-1) * nstart
+
+
             else:
                 raise ValueError("Must specify +1 or -1 for strand.")
 
@@ -164,6 +183,10 @@ class LIET:
         self.data['pos_reads'] = pos_reads
         self.data['neg_reads'] = neg_reads
         self.data['pad'] = pad
+
+        # Shifted positive/negative strand coordinate ranges for fitting
+        self.data['pos_coord_fit_range'] = (pstart, pstop)
+        self.data['pos_coord_fit_range'] = (nstart, nstop)
 
 
 
