@@ -257,15 +257,16 @@ class LIET:
         They are merely simple values for easy interpretability.
         '''
         default_priors = {
-            'mL' : ['normal', [0, 500]],
-            'sL' : ['exponential', [100, 1]],
-            'tI' : ['exponential', [100, 1]],
-            'mT' : ['exponential', [100, 1]],
-            'sT' : ['exponential', [100, 1]],
-            'w' : ['dirichlet', [1, 1, 1, 1]],
-            'mL_a' : ['normal', [0, 500]],
-            'sL_a' : ['exponential', [100, 1]],
-            'tI_a' : ['exponential', [100, 1]]
+            'mL' : {'dist' : 'normal', 'mu' : 0, 'sigma' : 500},
+            'sL' : {'dist' : 'exponential', 'offset' : 1, 'tau' : 100},
+            'tI' : {'dist' : 'exponential', 'offset' : 1, 'tau' : 100},
+            'mT' : {'dist' : 'exponential', 'offset' : 1, 'tau' : 100},
+            'sT' : {'dist' : 'exponential', 'offset' : 1, 'tau' : 100},
+            'w' : {'dist' : 'dirichlet', 'alpha_LI' : 1, 'alpha_E' : 1, 
+                'alpha_T' : 1, 'alpha_B' : 1},
+            'mL_a' : {'dist' : 'normal', 'mu' : 0, 'sigma' : 500},
+            'sL_a' : {'dist' : 'exponential', 'offset' : 1, 'tau' : 100},
+            'tI_a' : {'dist' : 'exponential', 'offset' : 1, 'tau' : 100}
         }
         for p, prior in default_priors.items():
             if p not in self._p.keys():
