@@ -247,6 +247,34 @@ class LIET:
 
 
 
+    def set_default_priors(self):
+        '''
+        This function is an alternative to .set_priors(). It assigns a default 
+        set of values to the model priors. This function is helpful for manual 
+        fitting or to debug parts of the fit routine.
+
+        WARNING: These are not biologically optimal values for the priors!
+        They are merely simple values for easy interpretability.
+        '''
+        default_priors = {
+            'mL' : ['normal', [0, 500]],
+            'sL' : ['exponential', [100, 1]],
+            'tI' : ['exponential', [100, 1]],
+            'mT' : ['exponential', [100, 1]],
+            'sT' : ['exponential', [100, 1]],
+            'w' : ['dirichlet', [1, 1, 1, 1]],
+            'mL_a' : ['normal', [0, 500]],
+            'sL_a' : ['exponential', [100, 1]],
+            'tI_a' : ['exponential', [100, 1]]
+        }
+        for p, prior in default_priors.items():
+            if p not in self._p.keys():
+                raise ValueError(f"'{p}' not acceptable parameter name")
+            else:
+                self.priors[p] = prior
+
+
+
     def build_model(self, antisense=True, background=True):
         '''Build the priors and model variables'''
         
@@ -557,7 +585,7 @@ class LIET:
 #                self.data['pos_reads'].max(), 
 #                self.data['neg_reads'].max()
 #            )
-# NOTE: Currently this construction for defining background range will brack the fractional pad feature!!!
+# NOTE: Currently this construction for defining background range will bork the fractional pad feature!!!
             if self.data['annot']['strand'] == +1:
                 sense_xmin = self.data['coord'].min() - self.data['pad'][0]
                 sense_xmax = self.data['coord'].max() + self.data['pad'][1]
