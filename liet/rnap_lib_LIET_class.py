@@ -185,7 +185,7 @@ class LIET:
 
         # Shifted positive/negative strand coordinate ranges for fitting
         self.data['pos_coord_fit_range'] = (pstart, pstop)
-        self.data['pos_coord_fit_range'] = (nstart, nstop)
+        self.data['neg_coord_fit_range'] = (nstart, nstop)
 
 
 
