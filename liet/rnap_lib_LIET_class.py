@@ -153,7 +153,7 @@ class LIET:
                 neg_reads = (np.array(neg_reads) - start) * (-1)               # This section still needs to be evaluated for correctness.
                 neg_reads = np.flip(neg_reads, axis=0)                         # I checked it and I think it's correct (4/28/24). Need to clean up dev comments.
 
-                # Calculate the strand specfic ranges after shifting
+                # Calculate the padded strand-specfic ranges after shifting
                 # These are used for defining the background Uniform components
                 pstart = coord.min()
                 pstop = coord.max()
@@ -167,12 +167,11 @@ class LIET:
                 neg_reads = (np.array(neg_reads) - stop) * (-1)
                 neg_reads = np.flip(neg_reads, axis=0)
 
-                # Calculate the strand specfic ranges after shifting
+                # Calculate the padded strand-specfic ranges after shifting
                 nstart = coord.min()
                 nstop = coord.max()
                 pstart = (-1) * nstop
                 pstop = (-1) * nstart
-
 
             else:
                 raise ValueError("Must specify +1 or -1 for strand.")
@@ -611,11 +610,13 @@ class LIET:
 #            )
 # NOTE: Currently this construction for defining background range will bork the fractional pad feature!!!
             if self.data['annot']['strand'] == +1:
-                sense_xmin = self.data['coord'].min() - self.data['pad'][0]
-                sense_xmax = self.data['coord'].max() + self.data['pad'][1]
+                sense_xmin, sense_xmax = self.data['pos_coord_fit_range']
+                #sense_xmin = self.data['coord'].min() - self.data['pad'][0]
+                #sense_xmax = self.data['coord'].max() + self.data['pad'][1]
             else:
-                sense_xmin = -self.data['coord'].max() - self.data['pad'][0]
-                sense_xmax = -self.data['coord'].min() + self.data['pad'][0]
+                sense_xmin, sense_xmax = self.data['neg_coord_fit_range']
+                #sense_xmin = -self.data['coord'].max() - self.data['pad'][0]
+                #sense_xmax = -self.data['coord'].min() + self.data['pad'][0]
             print(f"sense min,max: {sense_xmin}, {sense_xmax}")
             
             with self.model:
@@ -655,11 +656,13 @@ class LIET:
                 # This is confusing, but it's because of the coordinate transform that the max/min change.
                 # This assumes range shift has occurred. (this is confusing)
                 if self.data['annot']['strand'] == -1:
-                    anti_xmin = self.data['coord'].min() - self.data['pad'][1]
-                    anti_xmax = self.data['coord'].max() + self.data['pad'][0]
+                    anti_xmin, anti_xmax = self.data['pos_coord_fit_range']
+                    #anti_xmin = self.data['coord'].min() - self.data['pad'][1]
+                    #anti_xmax = self.data['coord'].max() + self.data['pad'][0]
                 else:
-                    anti_xmin = -self.data['coord'].max() - self.data['pad'][1]
-                    anti_xmax = -self.data['coord'].min() + self.data['pad'][0]
+                    anti_xmin, anti_xmax = self.data['neg_coord_fit_range']
+                    #anti_xmin = -self.data['coord'].max() - self.data['pad'][1]
+                    #anti_xmax = -self.data['coord'].min() + self.data['pad'][0]
                     
                 print(f"anti min,max: {anti_xmin}, {anti_xmax}")
                 
