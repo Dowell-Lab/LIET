@@ -541,7 +541,7 @@ def results_loader(gene_ids,
         bgn_file = config_parse['FILES']['BEDGRAPH_NEG']
 
     elif bedgraphs:
-        assert isinstance(bedgraphs, [tuple, list]), "bedgraphs not a tuple"
+        assert isinstance(bedgraphs, (tuple, list)), "bedgraphs not a tuple"
         bgp_file, bgn_file = bedgraphs
     
     else:
