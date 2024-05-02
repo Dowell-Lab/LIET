@@ -520,20 +520,34 @@ def log_format(liet, fit):
 
 # POST FITTING RESULTS HANDLING ===============================================
 
-def results_loader(gene_ids, config=None, result=None, log=None):
+def results_loader(gene_ids,
+                   bedgraphs=None, 
+                   config=None, 
+                   result=None, 
+                   log=None):
     '''
     This function uses much of the input data processing functionality to read 
     in LIET fitting results (from the .liet and .liet.log files) as well as 
     the read data, for the purposes of plotting the model fit. Uses the 
     following functions: config_loader(), bedgraph_loader(), FitParse, ...
     '''
-    # Parse config and fit results files
-    config_parse = dp.config_loader(config)
-    fit_parse = FitParse(result, log_file=log)
 
-    # Only need the input files from config
-    bgp_file = config_parse['FILES']['BEDGRAPH_POS']
-    bgn_file = config_parse['FILES']['BEDGRAPH_NEG']
+    if config:
+        # Parse config file
+        config_parse = dp.config_loader(config)
+
+        # Only need the input files from config
+        bgp_file = config_parse['FILES']['BEDGRAPH_POS']
+        bgn_file = config_parse['FILES']['BEDGRAPH_NEG']
+
+    elif bedgraphs:
+        assert isinstance(bedgraphs, [tuple, list]), "bedgraphs not a tuple"
+        bgp_file, bgn_file = bedgraphs
+    
+    else:
+        raise ValueError("You must specify either config or bedgraphs.")
+    
+    fit_parse = FitParse(result, log_file=log)
 
     # Determine chromosome string order
     chr_order = dp.chrom_order_reader(bgp_file, bgn_file)
