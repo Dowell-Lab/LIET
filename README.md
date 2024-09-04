@@ -154,7 +154,7 @@ After LIET successfully runs, it will output 3 files: `your_output_name.liet`, `
 ### `your_output_name.liet` file description 
 The `your_output_name.liet` file contains the model output in the format of `param=value;stdev-of-value` for `mL` ($\mu_L$), `sL` ($\sigma_L$), `mL_a` ($\mu_L'$), `sL_a` ($\sigma_L'$), `tI` ($T_{I}$), `tI_a` ($T_{I}'$),`mT` ($\mu_T$), and `sT` ($\sigma_T$). 
 
-This file also contains the relative proportions of each read in each stage of transcription ("weights") that are also in the format of `param=value;stdev-of-value`. Specifically, weights for each parameter appear as `w=[W_LI, W_E, W_T, W_B]` ($W_{LI}, $W_{E}, $W_{T}, $W_{B}) for the sense strand, and `w_a=[$W_LI', $W_B']` ($W_{LI}', $W_{B}) for the antisense strand in the LIET output file. This file also contains the annotation information associated with each gene that was properly fit, eg: `chr start stop strand gene`.
+This file also contains the relative proportions of each read in each stage of transcription ("weights") that are also in the format of `param=value;stdev-of-value`. Specifically, weights for each parameter appear as `w=[$W_{LI}$, $W_{E}$, $W_{T}$, $W_{B}$]` for the sense strand, and `w_a=[$W_{LI}'$, $W_{B}$]` for the antisense strand in the LIET output file. This file also contains the annotation information associated with each gene that was properly fit, eg: `chr start stop strand gene`.
 
 *Note all output parameters are reported in units of bases relative to the input annotation `start` position*
 
