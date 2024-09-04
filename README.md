@@ -1,10 +1,10 @@
 # Loading Initiation Elongation Termination (LIET) Model
 ## Table of contents
-1. [LIET model description] (#liet-model-description)
-2. [Installation] (#installation)
-3. [Usage] (#usage)
-4. [Example output] (#example-output)
-5. [Contact information] (#contact-information)
+1. [LIET model description](#liet-model-description)
+2. [Installation](#installation)
+3. [Usage](#usage)
+4. [Example output](#example-output)
+5. [Contact information](#contact-information)
 
 ## LIET model description 
 
