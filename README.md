@@ -1,10 +1,10 @@
 # Loading Initiation Elongation Termination (LIET) Model
 ## Table of contents
-1. [LIET model description] (##LIET-model-description)
-2. [Installation] (##Installation)
-3. [Usage] (##Usage)
-4. [Example output] (##Example output)
-5. [Contact information] (##Contact information)
+1. [LIET model description] (##liet-model-description)
+2. [Installation] (##installation)
+3. [Usage] (##usage)
+4. [Example output] (##example-output)
+5. [Contact information] (##contact-information)
 
 ## LIET model description 
 
@@ -183,8 +183,7 @@ Example workflow for plotting fits:
 
 
 ## Contact information
-jacob.stanley@colorado.edu
-georgia.barone@colorado.edu
+Contact jacob.stanley@colorado.edu or georgia.barone@colorado.edu for support with running LIET. 
 
 
 
