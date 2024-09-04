@@ -1,10 +1,10 @@
 # Loading Initiation Elongation Termination (LIET) Model
 ## Table of contents
-1. [LIET model description] (##liet-model-description)
-2. [Installation] (##installation)
-3. [Usage] (##usage)
-4. [Example output] (##example-output)
-5. [Contact information] (##contact-information)
+1. [LIET model description] (#liet-model-description)
+2. [Installation] (#installation)
+3. [Usage] (#usage)
+4. [Example output] (#example-output)
+5. [Contact information] (#contact-information)
 
 ## LIET model description 
 
@@ -26,7 +26,7 @@ The LIET model parameterizes the transcription process by annotating nascent run
 ![The LIET Model](./README-figs/LIET_MAIN_FIG1.png)
 
 ## Installation 
-1. To install LIET, first set up Miniconda on the cluster you are running LIET on. Instructions on how to do this are on the anaconda website [here][https://docs.anaconda.com/miniconda/]. Once you are on the website, scroll to the "quick command line install" and run the appropriate command based on your operating system (eg: macOS, Linux, or Windows). 
+1. To install LIET, first set up Miniconda on the cluster you are running LIET on. Instructions on how to do this are on the anaconda website [here](https://docs.anaconda.com/miniconda/). Once you are on the website, scroll to the "quick command line install" and run the appropriate command based on your operating system (eg: macOS, Linux, or Windows). 
 
 2. After you have installed Miniconda, install the PyMC (version 5.6) package into a new conda environment. 
 ```
@@ -183,7 +183,7 @@ Example workflow for plotting fits:
 
 
 ## Contact information
-Contact jacob.stanley@colorado.edu or georgia.barone@colorado.edu for support with running LIET. 
+Contact jacob.stanley@colorado.edu or georgia.barone@colorado.edu for more information. 
 
 
 
