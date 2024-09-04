@@ -1,29 +1,29 @@
 # Loading Initiation Elongation Termination (LIET) Model
 ## Table of contents
-1. [LIET model description] (## LIET model description)
-2. [Installation] (## Installation)
-3. [Usage] (## Usage)
-4. [Example output] (## Example output)
-5. [Contact information] (## Contact information)
+1. [LIET model description] (##LIET model description)
+2. [Installation] (##Installation)
+3. [Usage] (##Usage)
+4. [Example output] (##Example output)
+5. [Contact information] (##Contact information)
 
 ## LIET model description 
 
 The LIET model parameterizes the transcription process, by annotating nascent run-on sequencing data. Below are the parameters LIET outputs on a per-gene basis from nascent run-on sequencing data: 
 
-*$\mu_L$: Polymerase loading position 
-*$\mu_L'$: Polymerase antisense loading position 
-*$\sigma_L$: Polymerase loading uncertainty
-*$\sigma_L'$: Polymerase antisense loading uncertainty
-*$T_{I}$: Polymerase initiation length 
-*$T_{I}'$: Polymerase antisense initiation length
-*$\mu_T$: Position of polymerase dissociation
-*$\sigma_T$: Uncertainty of polymerase dissociation
-*$W_{LI}$: Proportion of reads that fall into loading and initiation
-*$W_{E}$: Proportion of reads that fall into elongation
-*$W_{T}$: Proportion of reads that fall into termination 
-*$W_{B}$: Proportion of reads that fall into background signal
+* $\mu_L$: Polymerase loading position 
+* $\mu_L'$: Polymerase antisense loading position 
+* $\sigma_L$: Polymerase loading uncertainty
+* $\sigma_L'$: Polymerase antisense loading uncertainty
+* $T_{I}$: Polymerase initiation length 
+* $T_{I}'$: Polymerase antisense initiation length
+* $\mu_T$: Position of polymerase dissociation
+* $\sigma_T$: Uncertainty of polymerase dissociation
+* $W_{LI}$: Proportion of reads that fall into loading and initiation
+* $W_{E}$: Proportion of reads that fall into elongation
+* $W_{T}$: Proportion of reads that fall into termination 
+* $W_{B}$: Proportion of reads that fall into background signal
 
-![The LIET Model](./README-figs/LIET_MAIN_FIG1.pdf)
+![The LIET Model](./README-figs/LIET_MAIN_FIG1.png)
 
 ## Installation 
 1. To install LIET, first set up Miniconda on the cluster you are running LIET on. Instructions on how to do this are on the anaconda website [here][https://docs.anaconda.com/miniconda/]. Once you are on the website, scroll to the "quick command line install" and run the appropriate command based on your operating system (eg: macOS, Linux, or Windows). 
