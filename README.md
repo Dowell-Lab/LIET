@@ -22,6 +22,8 @@ The LIET model parameterizes the transcription process by annotating nascent run
 * $W_{E}$: Proportion of reads that fall into elongation
 * $W_{T}$: Proportion of reads that fall into termination 
 * $W_{B}$: Proportion of reads that fall into background signal
+* $W_{B}'$: Proportion of reads that fall into antisense background signal
+* $W_{LI}'$: Proportion of reads that fall into antisense loading and initiation
 
 ![The LIET Model](./README-figs/LIET_MAIN_FIG1.png)
 
@@ -150,17 +152,51 @@ PAD=10000,30000
 After LIET successfully runs, it will output 3 files: `your_output_name.liet`, `your_output_name.liet.log`, and  `your_output_name.liet.err`
 
 ### `your_output_name.liet` file description 
-The `your_output_name.liet` file contains the model output in the form of `param=value;stdev-of-value` for `mL` ($\mu_L$), `sL` ($\sigma_L$), `mL_a` ($\mu_L'$), `sL_a` ($\sigma_L'$), `tI` ($T_{I}$), `tI_a` ($T_{I}'$),`mT` ($\mu_T$), and `sT` ($\sigma_T$). 
+The `your_output_name.liet` file contains the model output in the format of `param=value;stdev-of-value` for `mL` ($\mu_L$), `sL` ($\sigma_L$), `mL_a` ($\mu_L'$), `sL_a` ($\sigma_L'$), `tI` ($T_{I}$), `tI_a` ($T_{I}'$),`mT` ($\mu_T$), and `sT` ($\sigma_T$). 
 
-This file also contains the relative propertions of each read in each stage of transcription ("weights"). Weights for each parameter are also stored in this file, in the format of `w=[weight-of-loading-and-initiation, weight-of-elongation, wieght-of-termination, weight-of-background]` for the sense strand, and `w_a=[weight-of-antisense-loading-and-initiation, weight-of-antisense-background]` for the antisense strand. This file also contains the annotation information associated with each gene that was properly fit, eg: `chr start stop strand gene`.
+This file also contains the relative propertions of each read in each stage of transcription ("weights") that are also in the format of `param=value;stdev-of-value`. Weights for each parameter are also stored in this file, in the format of `w=[$W_{LI}, $W_{E}, $W_{T}, $W_{B}]` for the sense strand, and `w_a=[$W_{LI}', $W_{B}'` for the antisense strand. This file also contains the annotation information associated with each gene that was properly fit, eg: `chr start stop strand gene`.
 
 *Note all output parameters are reported in units of bases relative to the input annotation `start` position*
+
+Example `your_output_name.liet` file: 
+
+```
+# < date & time >
+# CONFIG	< config file >
+# Output format: param_name=value:stdev
+#===============================================================================
+chr1	6192929	6199595	-1	RPL22	mL=-7.37:1.97,sL=29.45:1.48,tI=941.68:16.17,mT=15346.39:7.23,sT=1141.38:5.97,w=[0.11 0.4  0.37 0.12]:[0. 0. 0. 0.],mL_a=79.13:6.39,sL_a=47.32:7.2,tI_a=412.33:18.51,w_a=[0.54 0.46]:[0.01 0.01]
+chr1	8862886	8878686	-1	ENO1	mL=28.6:0.17,sL=6.83:0.16,tI=31.86:0.48,mT=20057.07:9.87,sT=1625.24:8.52,w=[0.04 0.78 0.14 0.04]:[0. 0. 0. 0.],mL_a=-55.47:6.28,sL_a=388.95:7.05,tI_a=1493.6:14.77,w_a=[0.9 0.1]:[0. 0.]
+chr1	10032957	10179562	1	UBE4B	mL=32.71:0.81,sL=4.49:0.67,tI=440.27:11.48,mT=150245.41:19.92,sT=1200.96:19.44,w=[0.03 0.82 0.04 0.11]:[0. 0. 0. 0.],mL_a=-15.62:31.39,sL_a=2130.23:68.76,tI_a=467.92:102.13,w_a=[0.21 0.79]:[0.01 0.01]
+
+```
 
 ### `your_output_name.liet.log` description 
 The `your_output_name.liet.log` file contains ancillary information for each gene from each fit. This file contains the range of bases (referenced from the input annotation `start` position the model used to fit each gene (`fit_range`), the coverage on each strand (`strand_cov`), the minimum residual value and residual value in the first iteration of fitting (`elbo_range`), the number of iterations LIET fit the data (`iterations`), and how long the model took to fit each gene in units of minutes (`fit_time_min`). 
 
+Example `your_output_name.liet.log` file:
+ 
+```
+# < date & time >
+# CONFIG < config file >
+#===============================================================================
+>RPL22:chr1:6192929:6199595:-1
+fit_range:(-4999, 39576)
+strand_cov:(1424, -97157)
+elbo_range:(978308.6131516759, 1304787.3519572061)
+iterations:50000
+
+```
+
 ### `your_output_name.liet.err` description 
 The `your_output_name.liet.log` file contains information about any errors that occured when fitting each gene. If no errors occured, the file will just write the name of the gene that was fit to this file. 
+
+Example `your_output_name.liet.err` file where genes were fit with no errors: 
+```
+>RPL22
+>ENO1
+>UBE4B
+```
 
 ### Plotting your fits
 After running LIET, **assessment of the output fits are essential** to ensure the model worked as anticipated. The `liet_res_class.py`, `rnap_lib_fitting_results.py` and `rnap_lib_plotting.py` libraries are helpful for plotting model fits. 
