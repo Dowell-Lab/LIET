@@ -1,6 +1,6 @@
 # Loading Initiation Elongation Termination (LIET) Model
 ## Table of contents
-1. [LIET model description] (##LIET model description)
+1. [LIET model description] (##LIET-model-description)
 2. [Installation] (##Installation)
 3. [Usage] (##Usage)
 4. [Example output] (##Example output)
@@ -8,7 +8,7 @@
 
 ## LIET model description 
 
-The LIET model parameterizes the transcription process, by annotating nascent run-on sequencing data. Below are the parameters LIET outputs on a per-gene basis from nascent run-on sequencing data: 
+The LIET model parameterizes the transcription process by annotating nascent run-on sequencing data. Below are the parameters LIET outputs on a per-gene basis from nascent run-on sequencing data: 
 
 * $\mu_L$: Polymerase loading position 
 * $\mu_L'$: Polymerase antisense loading position 
