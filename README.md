@@ -1,32 +1,38 @@
 # Loading Initiation Elongation Termination (LIET) Model
 ## Table of contents
-1. [LIET model description](#liet-model-description)
-2. [Installation](#installation)
-3. [Usage](#usage)
-4. [Example output](#example-output)
-5. [Contact information](#contact-information)
+1. [LIET model description](#liet-model-description) - What is the LIET model and how does it work
+2. [Installation](#installation) - How to install LIET
+3. [Usage](#usage) - How to run LIET
+4. [Example output](#example-output) - Example output of a LIET run
+5. [Contact information](#contact-information) - Who to contact about LIET
 
 ## LIET model description 
 
 The LIET model parameterizes the transcription process by annotating nascent run-on sequencing data. Below are the parameters LIET outputs on a per-gene basis from nascent run-on sequencing data: 
 
-* $\mu_L$: Polymerase loading position 
-* $\mu_L'$: Polymerase antisense loading position 
-* $\sigma_L$: Polymerase loading uncertainty
-* $\sigma_L'$: Polymerase antisense loading uncertainty
-* $T_{I}$: Polymerase initiation length 
-* $T_{I}'$: Polymerase antisense initiation length
-* $\mu_T$: Position of polymerase dissociation
-* $\sigma_T$: Uncertainty of polymerase dissociation
-* $W_{LI}$: Proportion of reads that fall into loading and initiation
-* $W_{E}$: Proportion of reads that fall into elongation
-* $W_{T}$: Proportion of reads that fall into termination 
-* $W_{B}$: Proportion of reads that fall into background signal
-* $W_{B}'$: Proportion of reads that fall into antisense background signal
-* $W_{LI}'$: Proportion of reads that fall into antisense loading and initiation
+
+| Parameter       | LIET Output Value                | Units                 | Description                                              |
+|-----------------|----------------------------------|-----------------------|----------------------------------------------------------|
+| $\mu_L$         | `mL`                                 |          Positions (base pairs)             | Polymerase loading position                              |
+| $\mu_L'$        |       `mL_a`                             |        Positions (base pairs)                 | Polymerase antisense loading position                    |
+| $\sigma_L$      |        `sL`                          |            Lengths (base pairs)             | Polymerase loading uncertainty                           |
+| $\sigma_L'$     |           `sL_a`                       |         Lengths (base pairs)              | Polymerase antisense loading uncertainty                 |
+| $T_{I}$         |                `tI`                  |           Lengths (base pairs)            | Polymerase initiation length                             |
+| $T_{I}'$        |             `tI_a`                     |           Lengths (base pairs)            | Polymerase antisense initiation length                   |
+| $\mu_T$         |                  `mT`                |          Positions (base pairs)              | Polymerase dissociation position                         |
+| $\sigma_T$      |                     `sT`             |             Lengths (base pairs)           | Polymerase dissociation uncertainty                      |
+| $W_{LI}$        |                   First value in `w` list               |       Weights (fraction %)                | Proportion of reads that fall into loading and initiation|
+| $W_{E}$         |          Second value in `w` list                         |         Weights (fraction %)               | Proportion of reads that fall into elongation            |
+| $W_{T}$         |              Third value in `w` list                     |           Weights (fraction %)             | Proportion of reads that fall into termination           |
+| $W_{B}$         |                  Fourth value in `w` list                 |            Weights (fraction %)            | Proportion of reads that fall into background signal     |
+| $W_{B}'$        |             Second value in `w_a` list                      |           Weights (fraction %)             | Proportion of reads that fall into antisense background signal |
+| $W_{LI}'$       |                   First value in `w_a` list                |          Weights (fraction %)              | Proportion of reads that fall into antisense loading and initiation |
+ 
+
+Transcription by RNA polymerases is an exquisitely regulated process and the principle step of the central dogma. Transcription is the primary determinate of cell-state and most cellular perturbations (e.g. disease, drug treatment, or abiotic stressors) impact transcription by altering the activity of polymerases. Thus, the ability to detect and quantify detailed changes in polymerase activity would yield considerable insight into most cellular processes. Nascent run-on sequencing assays provide a direct readout of polymerase activity, but no tools exist that comprehensively model this activity at genes.  Thus, we focus on RNA polymerase II (RNAP2), which is responsible for transcribing all protein-coding genes and many ncRNAs. Here we present the first model to fully capture the complete process of gene transcription by RNAP2.  For an individual gene, this model parameterizes each distinct stage of RNAP2 transcription- *Loading*, *Initiation*, *Elongation*, and *Termination*, hence LIET-in a biologically interpretable way, and combines them in a Bayesian mixture model intended to be applied to nascent run-on sequencing data. To learn more, read the LIET pre-print [here](https://www.biorxiv.org/content/10.1101/2024.10.03.616401v1) 
 
 ![The LIET Model](./README-figs/LIET_MAIN_FIG1.png)
-
+**Figure 1** The LIET model. The distributions used to define the processes (A) Loading, Initiation (blue), and (B) Termination (orange) respectively. (C) The full LIET model with each of the separate components shown, along with the combined distribution (black dotted line). The Elongation region (green) is defined based on the two components that flank it (Loading+Initiation in blue; Termination in orange). The full model also includes an upstream antisense Loading+Initiation region, in red.(D) An example of the full model fit to MRPS21 from HCT116 data. Figure adapted from Figure 1 in the LIET model [pre-print](https://www.biorxiv.org/content/10.1101/2024.10.03.616401v1).
 ## Installation 
 1. To install LIET, first set up Miniconda on the cluster you are running LIET on. Instructions on how to do this are on the anaconda website [here](https://docs.anaconda.com/miniconda/). Once you are on the website, scroll to the "quick command line install" and run the appropriate command based on your operating system (eg: macOS, Linux, or Windows). 
 
