@@ -87,7 +87,6 @@ def input_processing(config_file):
 # Parallelizable function that performs all the fitting
 def fit_routine(fit_instance, config, pad_dict):
     
-#    time.sleep(30)
     start_time = time.time()
 
     annot, reads = fit_instance
@@ -100,7 +99,6 @@ def fit_routine(fit_instance, config, pad_dict):
     pad_args = [start, stop, strand, pad]
     adj_start, adj_stop = dp.pad_calc(*pad_args)
 
-#    return_dict = {'res': f"{gene_id}\tERROR", 'log': f">{gene_id}:ERROR"}
     return_dict = {
         'res': f"{gene_id}\n", 
         'log': (f">{gene_id}\n", ), 
@@ -182,22 +180,16 @@ def fit_routine(fit_instance, config, pad_dict):
             method=config['FIT']['METHOD'],
             optimizer=config['FIT']['OPTIMIZER'],
             learning_rate=config['FIT']['LEARNING_RATE'],
-            start=None,                                                 # NEEDS IMPLEMENTATION
+            start=None,
             iterations=config['FIT']['ITERATIONS'],
-            tolerance=config['FIT']['TOLERANCE'],                       # NEED TO FIX IMPLEMENTATION
-            param_tracker=False,                                        # NEEDS IMPLEMENTATION
+            tolerance=config['FIT']['TOLERANCE'],
+            param_tracker=False,
         )
     except:
         return_dict['res'] = f"{annot_dict['gene_id']}: fitting error\n"
         return_dict['err'].append(f"{traceback.format_exc()}\n")
         return {annot: return_dict}
 
-    ## Currently omitting these steps =============================
-    # Evaluate "best fit" values
-    # Evaluate whether or not to refit 
-    # Run refit if convergence criteria not met
-    ## ============================================================
-    # print("Summarizing post...")
     # Summarize posteriors
     try:
         post_stats = fr.posterior_stats(
@@ -289,38 +281,7 @@ def main():
 
     inputs = input_processing(config_file)
     config, pad_dict, reads_dict, annot_dict, filter_log = inputs
-
-    # # Load config (contents: FILES, MODEL, PRIORS, DATA_PROC, FITTING, RESULTS)
-    # #config_file = "C:\\Users\\Jacob\\Dropbox\\0DOWELL\\rnap_model\\LIET\\test_config.txt"
-    # config = dp.config_loader(config_file)
-
-    # # Parse annotation file
-    # annot_file = config['FILES']['ANNOTATION']
-    # annot_dict = dp.annot_BED6_loader(annot_file)
-
-    # # Extract all gene ID's from annotation dictionary
-    # gene_id_list = [gid for ch, rois in annot_dict.items() 
-    #                 for gid in rois.values() ]
-
-    # # Compute padding dictionary from file and default pads
-    # default_pads = config['DATA_PROC']['PAD']  # (5'pad, 3'pad)
-    # pad_file = config['FILES']['PAD_FILE']
-    # pad_dict = dp.pad_dict_generator(gene_id_list, default_pads, pad_file)
-
-    # # Open bedgraph files and load reads
-    # bgp_file = config['FILES']['BEDGRAPH_POS']
-    # bgn_file = config['FILES']['BEDGRAPH_NEG']
-    # reads_dict = dp.bedgraph_loader(bgp_file, bgn_file, annot_dict, pad_dict)
-
-    # # Filter out genes with zero/low coverage
-    # if config['DATA_PROC']['COV_THRESHOLDS']:
-    #     cov_thresh = config['DATA_PROC']['COV_THRESHOLDS']
-    # else:
-    #     cov_thresh = (0, 0)
-    # filtered = dp.cov_filter(reads_dict, annot_dict, thresholds=cov_thresh)
-    # reads_dict, annot_dict, filter_log = filtered
-
-    print(f"RD: {list(reads_dict.keys())}")
+    #print(f"RD: {list(reads_dict.keys())}")
     
     # Combine annot_dict and reads_dict for parallelization input
     mpargs = {
@@ -338,11 +299,6 @@ def main():
         [(i, config, pad_dict) for i in mpargs.items()]
     )
     pool.close()
-
-    #with mp.Pool(processes=mp.cpu_count()) as pool:
-    #    res = list(pool.apply(fit_routine, args=[i, config, pad_dict]) for i in mpargs.items())
-    #res = res.get()
-    #print(f"LENGTH res: {len(res)}")
 
     print("Fitting complete")
 
@@ -363,7 +319,7 @@ def main():
     fr.res_file_init(res_file, config_file)
     print(f"res file: {res_filename}")
 
-    log_filename = f"{res_filename}.log"                                     # Need to finalize this function
+    log_filename = f"{res_filename}.log"
     log_file = open(log_filename, 'w')
     fr.log_file_init(log_file, config_file)
     print(f"log file: {log_filename}")
@@ -396,7 +352,6 @@ def main():
         except:
             print(f"Can't write err: {annot}")
 
-    print("ALL DONE")
     res_file.close()
     log_file.close()
     err_file.close()
