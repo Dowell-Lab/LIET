@@ -1,3 +1,4 @@
+import math
 import numpy as np
 import scipy.stats as stats
 
@@ -29,14 +30,10 @@ def elongation_pdf(x, m0, s0, t0, m1, s1):
         cdf = stats.exponnorm.cdf(x, t0/s0, m0, s0)
         sf = stats.norm.sf(x, m1, s1)
         unscaled = np.nan_to_num(cdf * sf)
-        #unscaled = (stats.exponnorm.cdf(x, t0/s0, m0, s0) 
-        #    * stats.norm.sf(x, m1, s1))
     else:
         cdf = stats.exponnorm.cdf(invert(x, m0), t0/s0, m0, s0)
         sf = stats.norm.sf(invert(x, m1), m1, s1)
         unscaled = np.nan_to_num(cdf * sf)
-        #unscaled = (stats.exponnorm.cdf(invert(x, m0), t0/s0, m0, s0) 
-        #    * stats.norm.sf(invert(x, m1), m1, s1))
     
     xmin = int(min(m0 - 10*s0, m1 - 10*s1))
     xmax = int(max(m0 + 10*np.sqrt(s0**2 + t0**2), m1 + 10*s1))
@@ -46,16 +43,69 @@ def elongation_pdf(x, m0, s0, t0, m1, s1):
         cdf = stats.exponnorm.cdf(xfull, t0/s0, m0, s0)
         sf = stats.norm.sf(xfull, m1, s1)
         norm_factor = sum(np.nan_to_num(cdf * sf))
-        #norm_factor = sum(stats.exponnorm.cdf(xfull, t0/s0, m0, s0) 
-        #    * stats.norm.sf(xfull, m1, s1))
     else:
         cdf = stats.exponnorm.cdf(invert(xfull, m0), t0/s0, m0, s0)
         sf = stats.norm.sf(invert(xfull, m1), m1, s1)
         norm_factor = sum(np.nan_to_num(cdf * sf))
-        #norm_factor = sum(stats.exponnorm.cdf(invert(xfull, m0), t0/s0, m0, s0) 
-        #    * stats.norm.sf(invert(xfull, m1), m1, s1))
 
     pdf = np.nan_to_num(unscaled/norm_factor)
+    return pdf
+
+
+def elongation_analytic_norm_logged(m0, s0, t0, m1, s1):
+    '''This function computes the normalization constant for the Elongation 
+    distribution. It corresponds to the log of Eq. S.20 in the supplement to 
+    the paper. 
+    
+    Each term in S.20 is represented as exp(log(term)) for numeric stability 
+    and these terms are combined as per S.20. We apply the log to the final 
+    result to aid in calculating the PDF in elongation_pdf_alt().'''
+
+    Delta = abs(m1 - m0)
+    sigma_square = s0**2 + s1**2
+    sigma_sqrt = math.sqrt(sigma_square)
+    Sigma = sigma_square / t0
+
+    # Log of Phi (standard norm cdf) and phi (standard norm pdf) in Eq. S.20
+    log_Phi1 = stats.norm.logcdf(Delta/sigma_sqrt, mu=0, sigma=1)
+    log_phi1 = stats.norm.logpdf(Delta/sigma_sqrt, mu=0, sigma=1)
+    log_Phi2 = stats.norm.logcdf((Delta-Sigma)/sigma_sqrt, mu=1, sigma=1)
+
+    # The four terms of Eq. S.20
+    term1 = math.exp(math.log(Delta) + log_Phi1)
+    term2 = math.exp(math.log(sigma_sqrt) + log_phi1)
+    term3 = math.exp(math.log(t0) + log_Phi1)
+    term4 = math.exp(math.log(t0) - (Delta-Sigma/2)/t0 + log_Phi2)
+
+    log_normalization_factor = math.log(term1 + term2 - term3 + term4)
+
+    return log_normalization_factor
+
+
+def elongation_pdf_alt(x, m0, s0, t0, m1, s1):
+    '''
+    This function computes the elongation PDF with the analytic normalization 
+    method computed by elongation_analytic_norm_logged(), instead of the 
+    numeric integration method like elongation_pdf() above. They both should 
+    give the same result (up to limit of numeric precision), but this one is 
+    consistent with the way the model is computed in the PyMC representation.
+
+    The PDF is computed by exp[log(CDF) + log_SF - log(A)] where A is the 
+    normalization constant from Eq. S.20.
+    '''
+
+    if m0 <= m1:
+        log_cdf = stats.exponnorm.logcdf(x, t0/s0, m0, s0)
+        log_sf = stats.norm.logsf(x, m1, s1)
+    else:
+        log_cdf = stats.exponnorm.logcdf(invert(x, m0), t0/s0, m0, s0)
+        log_sf = stats.norm.logsf(invert(x, m1), m1, s1)
+    
+    log_norm_fact = elongation_analytic_norm_logged(m0, s0, t0, m1, s1)
+
+    # PDF = (CDF*SF)/A = exp[log((CDF*SF)/A)] = exp[log(CDF)+log(SF)-log(A)]
+    pdf = np.exp(log_cdf + log_sf - log_norm_fact)
+
     return pdf
 
 
@@ -68,7 +118,6 @@ def background_pdf(x):
     length = len(x)
     pdf = np.ones(length) * (1/length)
     return pdf
-
 
 
 ## Model RVS components =======================================================
