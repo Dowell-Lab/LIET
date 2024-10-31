@@ -246,7 +246,6 @@ def posterior_stats(
     post_stats = {}
     for p in params:
 
-#        try:
         samps = posterior_samples[p][0,:]
 
         if calc_mean:
@@ -286,10 +285,6 @@ def posterior_stats(
             'skewtest': skewtest_val
         }
 
-#       except:
-#            print(f"WARNING: Can't compute stat for {p}.")
-#            continue
-
     return post_stats
 
 
@@ -305,7 +300,6 @@ def res_file_init(res_file, config_file_path):
     
     config_file_path : str
         Full path to the config file used for LIET run.
-
 
     Returns
     -------
@@ -335,7 +329,6 @@ def log_file_init(log_file, config_file_path):
     
     config_file_path : str
         Full path to the config file used for LIET run.
-
 
     Returns
     -------
@@ -368,7 +361,6 @@ def results_format(annot, post_stats, stat='mean', decimals=2):
     stat : str
         Statistical value to include for each of the parameters. Must be one 
         of the following: 'mean', 'median', or 'mode'. Default: 'mean'
-
 
     Returns
     -------
@@ -434,7 +426,6 @@ def log_write(log_file, liet, fit):
     fit : dict
         Dictionary containing variation inference objects from pymc3
 
-
     Returns
     -------
     Null
@@ -482,7 +473,6 @@ def log_format(liet, fit):
 
     fit : dict
         Dictionary containing variation inference objects from pymc3
-
 
     Returns
     -------
@@ -579,8 +569,6 @@ def results_loader(gene_ids,
         pad_dict[gid] = (abs(begin), abs(end - gene_len))
 
     # Reads data. Format: {'gene_id': (preads, nreads), ...}
-#    print(f"ANNOTS: {annot_dict}")
-#    print(f"PADS: {pad_dict}")
     reads_dict = dp.bedgraph_loader(
         bgp_file, 
         bgn_file, 
@@ -610,13 +598,6 @@ def results_loader(gene_ids,
         if len(model_params['w_a']) == 2:
             w_a = model_params['w_a']
             model_params['w_a'] = [w_a[0], 0, 0, w_a[1]]
-
-#        print(f"GENE {gid}")
-#        print(f"x range: {min(xvals)}, {max(xvals)}")
-#        print(f"START POS: {start}")
-#        print(f"preads range: {min(preads)}, {max(preads)}")
-#        print(f"nreads range: {min(nreads)}, {max(nreads)}")
-#        print(model_params)
 
         results[gid] = (xvals, preads, nreads, strand, model_params)
 
@@ -744,20 +725,3 @@ def hist_generator(
     height_n = -hist_n[0] * frac_n
 
     return hist_p, hist_n, height_p, height_n
-
-    # loc = hist[1][:-1]
-    # width = hist[1][1] - hist[1][0]
-    # ax.bar(loc, height, width, alpha=0.2, align='edge', color=col)
-
-    # if strand == '+' or strand == 1:
-    #     hist = np.histogram(data_n, bins=bins, density=True)
-    #     height = -hist[0] * frac_n
-    #     col = 'C3'
-    # else:
-    #     hist = np.histogram(data_p, bins=bins, density=True)
-    #     height = +hist[0] * frac_p
-    #     col = 'C0'
-
-    # loc = hist[1][:-1]
-    # width = hist[1][1] - hist[1][0]
-    # ax.bar(loc, height, width, alpha=0.2, align='edge', color=col)
