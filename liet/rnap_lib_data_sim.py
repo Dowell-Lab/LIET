@@ -22,6 +22,7 @@ def load_initiation_pdf(x, m, s, t):
     pdf = stats.exponnorm.pdf(x, t/s, m, s)
     return pdf
 
+
 # Note elongation_pdf must be inverted internally because it has 2 inversion 
 # points --- <m0> and <m1>.
 def elongation_pdf(x, m0, s0, t0, m1, s1):
@@ -67,8 +68,8 @@ def elongation_analytic_norm_logged(m0, s0, t0, m1, s1):
     Sigma = sigma_square / t0
 
     # Log of Phi (standard norm cdf) and phi (standard norm pdf) in Eq. S.20
-    log_Phi1 = stats.norm.logcdf(Delta/sigma_sqrt, mu=0, sigma=1)
-    log_phi1 = stats.norm.logpdf(Delta/sigma_sqrt, mu=0, sigma=1)
+    log_Phi1 = stats.norm.logcdf(Delta/sigma_sqrt, loc=0, scale=1)
+    log_phi1 = stats.norm.logpdf(Delta/sigma_sqrt, loc=0, scale=1)
     log_Phi2 = stats.norm.logcdf((Delta-Sigma)/sigma_sqrt, mu=1, sigma=1)
 
     # The four terms of Eq. S.20
