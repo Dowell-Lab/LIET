@@ -70,7 +70,7 @@ def elongation_analytic_norm_logged(m0, s0, t0, m1, s1):
     # Log of Phi (standard norm cdf) and phi (standard norm pdf) in Eq. S.20
     log_Phi1 = stats.norm.logcdf(Delta/sigma_sqrt, loc=0, scale=1)
     log_phi1 = stats.norm.logpdf(Delta/sigma_sqrt, loc=0, scale=1)
-    log_Phi2 = stats.norm.logcdf((Delta-Sigma)/sigma_sqrt, mu=1, sigma=1)
+    log_Phi2 = stats.norm.logcdf((Delta-Sigma)/sigma_sqrt, loc=1, scale=1)
 
     # The four terms of Eq. S.20
     term1 = math.exp(math.log(Delta) + log_Phi1)
