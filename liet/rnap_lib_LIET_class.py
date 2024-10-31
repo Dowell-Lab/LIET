@@ -132,7 +132,6 @@ class LIET:
     def load_seq_data(
         self, 
         coord=None,
-#        positions=None, 
         pos_reads=None,
         neg_reads=None, 
         pad=0,
@@ -150,8 +149,8 @@ class LIET:
             if strand == 1:
                 coord = np.array(coord) - start
                 pos_reads = np.array(pos_reads) - start
-                neg_reads = (np.array(neg_reads) - start) * (-1)               # This section still needs to be evaluated for correctness.
-                neg_reads = np.flip(neg_reads, axis=0)                         # I checked it and I think it's correct (4/28/24). Need to clean up dev comments.
+                neg_reads = (np.array(neg_reads) - start) * (-1)
+                neg_reads = np.flip(neg_reads, axis=0)
 
                 # Calculate the padded strand-specfic ranges after shifting
                 # These are used for defining the background Uniform components
@@ -429,28 +428,6 @@ class LIET:
         # Define model components (LI, E, T) --- sense strand
         with self.model:
             # Custom Elongation distribution ==================================
-# OLDDEST APPROACH
-#            def _emg_cdf(x, mu, sigma, tau):
-#                # z = (x - mu) / sigma
-#                def _norm_cdf(z):
-#                    return 0.5 * (1 + tt.erf(z / tt.sqrt(2.0)))
-
-#                z = (x - mu) / sigma
-#                k = sigma / tau
-#                exparg = 0.5*(k**2) - z*k
-#                cdf =  _norm_cdf(z) - tt.exp(exparg) * _norm_cdf(z - k)
-
-#                z = (x - mu) / sigma
-#                invK = sigma / tau
-
-#                exparg = invK * (0.5 * invK - z)
-                # Sum of logs instead of product avoids overflow error
-#                logprod = exparg + tt.log(_norm_cdf(z - invK))
-                # Abs to avoid neg vals in diff at small prob (rounding error)
-#                cdf = tt.abs_(_norm_cdf(z) - tt.exp(logprod))
-
-#                return cdf
-
             # CDF/logCDF components
             def _emg_cdf(x, mu, sigma, tau):
                 rv = pm.ExGaussian.dist(mu=mu,sigma=sigma, nu=tau)
@@ -482,40 +459,11 @@ class LIET:
                     *_norm_sf(_x, mu=mT, sigma=sT)
                 )
 
-                #                _min = tt.floor(tt.min([
-#                    self._p['mL'] - _n*self._p['sL'], 
-#                    self._p['mT'] - _n*self._p['sT']
-#                ]))
-#                _max = tt.ceil(tt.max([
-#                    self._p['mL'] + _n*np.sqrt(self._p['sL']**2 
-#                    + self._p['tI']**2), 
-#                    self._p['mT'] + _n*self._p['sT']
-#                ]))
-
-#                _norm_array = (
-#                    _emg_cdf(
-#                        _x, 
-#                        mu=self._p['mL'], 
-#                        sigma=self._p['sL'], 
-#                        tau=self._p['tI']
-#                    )
-#                    * _norm_sf(
-#                        _x, 
-#                        mu=self._p['mT'], 
-#                        sigma=self._p['sT']
-#                    )
-#                )
                 _log_norm_factor = tt.log(tt.sum(_norm_array))
+
                 return _log_norm_factor
 
-            # NOTE: There's an issue with precision in this calculation. The numpy proto-type is higher precision by about 10^15. Not sure if it's a dtype issue.
             def _elong_analytic_norm(mL, sL, tI, mT, sT):
-#                mL_val = pm.math.constant(mL, dtype='int64')
-#                sL_val = pm.math.constant(sL, dtype='int64')
-#                tI_val = pm.math.constant(tI, dtype='int64')
-#                mT_val = pm.math.constant(mT, dtype='int64')
-#                sT_val = pm.math.constant(sT, dtype='int64')
-
                 Delta = pm.math.abs(mT - mL)
                 sigma_square = pm.math.sqr(sL) + pm.math.sqr(sT)
                 sigma_sqrt = pm.math.sqrt(sigma_square)
@@ -545,29 +493,12 @@ class LIET:
                     _log_emg_cdf(x, mu=mL, sigma=sL, tau=tI)
                     +_log_norm_sf(x, mu=mT, sigma=sT)
                 )
-#                _log_unscaled = (
-#                    _log_emg_cdf(
-#                        x, 
-#                        mu=self._p['mL'], 
-#                        sigma=self._p['sL'], 
-#                        tau=self._p['tI']
-#                    ) 
-#                    + _log_norm_sf(
-#                        x, 
-#                        mu=self._p['mT'],
-#                        sigma=self._p['sT']
-#                    )
-#                )
 
                 # Normalize distribution in logscale
                 log_pdf = _log_unscaled - _log_norm_factor
-                                                                            # NOT SURE IF I NEED THIS BOUNDING
-#                log_pdf = pm.distributions.dist_math.bound(_log_unscaled - _log_norm_factor, self._p['mL'] < self._p['mT'])
 
                 return log_pdf
                 #==============================================================
-            # Debugging print statement (can remove later)
-#            mL_print = tt.printing.Print('mL')(self._p['mL'])
 
             # Distribution for the Loading/Initiation phase (native to pymc)
             LI_pdf = pm.ExGaussian.dist(
@@ -577,7 +508,7 @@ class LIET:
                 nu=self._p['tI']
             )
 
-            # Convert Aesara log-prob func into pymc distribution variable
+            # Convert PyTensor log-prob func into pymc distribution variable
             E_pdf = pm.DensityDist.dist(
                 self._p['mL'],
                 self._p['sL'],
@@ -587,8 +518,7 @@ class LIET:
                 logp=elong_logp,
                 class_name='E_pdf'
             )
-#            E_pdf = pm.DensityDist.dist(class_name='E_pdf', logp=elong_logp)
-            
+
             # Distribution for the Termination phase (native to pymc)
             T_pdf = pm.Normal.dist(mu=self._p['mT'], sigma=self._p['sT'])
 
@@ -600,24 +530,12 @@ class LIET:
         # Define sense-strand full model (with or without background)
         if background == True and self.priors['w']['alpha_B'] != 0:
             
-#            xmin = -1 + min(
-#                self.data['pos_reads'].min(), 
-#                self.data['neg_reads'].min()
-#            )
-#            xmax = 1 + max(
-#                self.data['pos_reads'].max(), 
-#                self.data['neg_reads'].max()
-#            )
-# NOTE: Currently this construction for defining background range will bork the fractional pad feature!!!
             if self.data['annot']['strand'] == +1:
                 sense_xmin, sense_xmax = self.data['pos_coord_fit_range']
-                #sense_xmin = self.data['coord'].min() - self.data['pad'][0]
-                #sense_xmax = self.data['coord'].max() + self.data['pad'][1]
             else:
                 sense_xmin, sense_xmax = self.data['neg_coord_fit_range']
-                #sense_xmin = -self.data['coord'].max() - self.data['pad'][0]
-                #sense_xmax = -self.data['coord'].min() + self.data['pad'][0]
-            print(f"sense min,max: {sense_xmin}, {sense_xmax}")
+
+            #print(f"sense min,max: {sense_xmin}, {sense_xmax}")
             
             with self.model:
                 back_pdf = pm.Uniform.dist(lower=sense_xmin, upper=sense_xmax)
@@ -653,18 +571,15 @@ class LIET:
             
             if background == True and self.priors['w']['alpha_B'] != 0:
                 
-                # This is confusing, but it's because of the coordinate transform that the max/min change.
-                # This assumes range shift has occurred. (this is confusing)
+                # This is confusing, but it's because of the coordinate 
+                # transform that the max/min change. This assumes range shift 
+                # has occurred.
                 if self.data['annot']['strand'] == -1:
                     anti_xmin, anti_xmax = self.data['pos_coord_fit_range']
-                    #anti_xmin = self.data['coord'].min() - self.data['pad'][1]
-                    #anti_xmax = self.data['coord'].max() + self.data['pad'][0]
                 else:
                     anti_xmin, anti_xmax = self.data['neg_coord_fit_range']
-                    #anti_xmin = -self.data['coord'].max() - self.data['pad'][1]
-                    #anti_xmax = -self.data['coord'].min() + self.data['pad'][0]
                     
-                print(f"anti min,max: {anti_xmin}, {anti_xmax}")
+                #print(f"anti min,max: {anti_xmin}, {anti_xmax}")
                 
                 with self.model:
                     # Anti-sense background component
@@ -749,7 +664,6 @@ class LIET:
                 mean = np.mean(samps, axis=0)
                 median = np.median(samps, axis=0)
                 std = sp.stats.tstd(samps, axis=0)
-#                mode = sp.stats.mode(samps, axis=0)[0][0]
                 mode = kde_mode(samps)
                 skew = sp.stats.skew(samps, axis=0)
                 skewtest = sp.stats.skewtest(samps, axis=0).pvalue
@@ -784,7 +698,6 @@ class LIET:
                 prior_samp = pm.sample_prior_predictive(
                     samples=10000, 
                     var_names=non_none_params
-                    #var_names = self._p.keys()
                 )
 
             # Plot priors
@@ -812,7 +725,8 @@ class LIET:
         Plots the posterior distributions and (if computed) identifies the 
         statistics for each parameter.
 
-        TODO: Fix the save kwarg, add if statement to check existence of stats for axvlines
+        TODO: Fix the save kwarg, add if statement to check existence of stats 
+        for axvlines
         '''
 
         if self.results['posteriors']:
