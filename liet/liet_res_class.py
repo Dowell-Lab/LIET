@@ -81,17 +81,7 @@ class FitParse:
         self.mL, self.mL_std = self.param_extract('mL', stdev=True)
         self.sL, self.sL_std = self.param_extract('sL', stdev=True)
         self.tI, self.tI_std = self.param_extract('tI', stdev=True)
-        
-        # Recalculate mT values so they are relative to end of annotation
-        absolute_mT, self.mT_std = self.param_extract('mT', stdev=True)
-        relative_mT = []
-        for i, gene in enumerate(self.genes):
-            tss = self.annotations[gene][1]
-            tcs = self.annotations[gene][2]
-            diff = abs(tcs - tss)
-            relative_mT.append(absolute_mT[i] - diff)
-        self.mT = relative_mT
-
+        self.mT, self.mT_std = self.param_extract('mT', stdev=True)
         self.sT, self.sT_std = self.param_extract('sT', stdev=True)
         self.w, self.w_std = self.param_extract('w', stdev=True)
         self.mL_a, self.mL_a_std = self.param_extract('mL_a', stdev=True)
