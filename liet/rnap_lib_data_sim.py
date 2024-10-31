@@ -135,7 +135,7 @@ def elongation_rvs(x, m0, s0, t0, m1, s1, size=1000, seed=42):
     xmax = int(max(m0 + 10*np.sqrt(s0**2 + t0**2), m1 + 10*s1))
     xfull = np.array(range(xmin, xmax))
 
-    pdf = elongation_pdf(xfull, m0=m0, s0=s0, t0=t0, m1=m1, s1=s1)
+    pdf = elongation_pdf_alt(xfull, m0=m0, s0=s0, t0=t0, m1=m1, s1=s1)
 
     # Adjust pdf to sum to 1.0 (residue from finite normalization integration)
     residue = 1.0 - sum(pdf)
@@ -278,7 +278,7 @@ def gene_model(
                 pdf_p += wLI_p * li_pdf_p 
 
             if wE_p != 0.0:
-                e_pdf_p = elongation_pdf(
+                e_pdf_p = elongation_pdf_alt(
                     xvals, 
                     m0=mu0_p, 
                     s0=sig0_p, 
@@ -315,7 +315,7 @@ def gene_model(
 
             if wE_n != 0.0:
             # Elongation pdf inverts internally
-                e_pdf_n = elongation_pdf(
+                e_pdf_n = elongation_pdf_alt(
                     xvals, 
                     m0=mu0_n, 
                     s0=sig0_n, 
