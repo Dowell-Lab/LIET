@@ -6,7 +6,7 @@
 4. [Example output](#example-output) - Example output of a LIET run
 5. [Contact information](#contact-information) - Who to contact about LIET
 
-![LIET_logo.jpg](./README-figs/LIET_logo.jpg)
+![LIET_logo_med.jpg](./README-figs/LIET_logo_med.jpg)
 
 ## LIET model description 
 
