@@ -6,6 +6,8 @@
 4. [Example output](#example-output) - Example output of a LIET run
 5. [Contact information](#contact-information) - Who to contact about LIET
 
+![LIET_logo.pdf](./README-figs/LIET_logo.pdf)
+
 ## LIET model description 
 
 The LIET model parameterizes the transcription process by annotating nascent run-on sequencing data. Below are the parameters LIET outputs on a per-gene basis from nascent run-on sequencing data: 
