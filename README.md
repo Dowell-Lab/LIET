@@ -60,6 +60,16 @@ conda activate your_env_name
 
 ## Usage 
 
+### Running LIET
+
+The software can be run in a number of ways, but we generally recommend using a HPC system with a workload manager like SLURM. The `./liet/liet_exe_mp.py` script is the main executable for fitting LIET to batches of genes. Within your job submission script you run the script as follows:
+```
+$ python /path/to/file/liet_exe_mp.py --config /path/to/config_file
+```
+The config file contains references to all inputs required to run the fitting, the details of which are outlined below. The `liet_exe_mp.py` script must be in the same directory as the other LIET library files as it imports from them.
+
+LIET batches can also be run on non-HPC systems both in batches and on a gene-by-gene basis. Though we do not recommend the former (fitting is slow) it can be done using the non-paralellized version of the batch script (`liet_exe.py`) in the same fashion. Running LIET on individual can be done within a Jupyter notebook (see `LIET_fitting_example.ipynb`). No matter how you run LIET, the inputs are all specified within the config file.
+
 ### Config file
 LIET takes one config file per sample run, which points the software to where the annotation file (what genes you want LIET to annotate), bedgraph files (input data), pad file (how many extra bases you want to add to the 5' and 3' ends of the gene annotation supplied in the annotation file to ensure LIET captures the entire transcription process), and path to where you want your results located/your result file name. 
 
