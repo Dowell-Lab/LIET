@@ -7,7 +7,7 @@
 5. [Contact information](#contact-information) - Who to contact about LIET
 
 <!--![LIET_logo.jpg](./README-figs/LIET_logo.jpg) -->
-<img src="./README-figs/LIET_logo.jpg" alt="LIET logo" width="300" />
+<img src="./README-figs/LIET_logo.jpg" alt="LIET logo" width="500" />
 
 ## LIET model description 
 
