@@ -15,7 +15,8 @@ Transcription by RNA polymerases is an exquisitely regulated process and the pri
 
 <!-- ![The LIET Model](./README-figs/LIET_MAIN_FIG1.png) -->
 <img src="./README-figs/LIET_MAIN_FIG1.png" alt="The LIET Model" width="750" />
-**Figure 1** The LIET model. The distributions used to define the processes (A) Loading, Initiation (blue), and (B) Termination (orange) respectively. (C) The full LIET model with each of the separate components shown, along with the distribution of the full mixutre model (black dotted line). The Elongation region (green) is defined based on the two components that flank it (Loading+Initiation in blue; Termination in orange). The full model also includes an upstream antisense Loading+Initiation region, in red. (D) An example of the full model fit to MRPS21 from HCT116 data. Figure adapted from Figure 1 in the LIET model [pre-print](https://www.biorxiv.org/content/10.1101/2024.10.03.616401v1).
+
+__Figure 1:__ The LIET model. The distributions used to define the processes (A) Loading, Initiation (blue), and (B) Termination (orange) respectively. (C) The full LIET model with each of the separate components shown, along with the distribution of the full mixutre model (black dotted line). The Elongation region (green) is defined based on the two components that flank it (Loading+Initiation in blue; Termination in orange). The full model also includes an upstream antisense Loading+Initiation region, in red. (D) An example of the full model fit to MRPS21 from HCT116 data. Figure adapted from Figure 1 in the LIET model [preprint](https://www.biorxiv.org/content/10.1101/2024.10.03.616401v1).
 
 The LIET model parameterizes the transcription process by annotating nascent run-on sequencing data. Below are the parameters LIET outputs on a per-gene basis from nascent run-on sequencing data: 
 
