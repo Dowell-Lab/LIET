@@ -10,7 +10,7 @@ import scipy as sp
 import pymc as pm
 import rnap_lib_data_sim as ds
 
-import aesara.tensor as tt
+import pytensor.tensor as tt
 #import theano
 #theano.config.exception_verbosity='high'
 #theano.config.compute_test_value='warn'
@@ -132,12 +132,14 @@ class LIET:
     def load_seq_data(
         self, 
         coord=None,
-#        positions=None, 
         pos_reads=None,
         neg_reads=None, 
         pad=0,
         shift=True,
     ):
+        # Store the absolute, padded coordinate range 
+        self.data['abs_coord_range'] = (coord.min(), coord.max())
+
         start = self.data['annot']['start']
         stop = self.data['annot']['stop']
         strand = self.data['annot']['strand']
@@ -147,14 +149,29 @@ class LIET:
             if strand == 1:
                 coord = np.array(coord) - start
                 pos_reads = np.array(pos_reads) - start
-                neg_reads = (np.array(neg_reads) - start) * (-1)               # This section still needs to be evaluated for correctness.
+                neg_reads = (np.array(neg_reads) - start) * (-1)
                 neg_reads = np.flip(neg_reads, axis=0)
+
+                # Calculate the padded strand-specfic ranges after shifting
+                # These are used for defining the background Uniform components
+                pstart = coord.min()
+                pstop = coord.max()
+                nstart = (-1) * pstop
+                nstop = (-1) * pstart
+
             elif strand == -1:
                 coord = (np.array(coord) - stop) * (-1)
                 coord = np.flip(coord, axis=0)
                 pos_reads = np.array(pos_reads) - stop
                 neg_reads = (np.array(neg_reads) - stop) * (-1)
                 neg_reads = np.flip(neg_reads, axis=0)
+
+                # Calculate the padded strand-specfic ranges after shifting
+                nstart = coord.min()
+                nstop = coord.max()
+                pstart = (-1) * nstop
+                pstop = (-1) * nstart
+
             else:
                 raise ValueError("Must specify +1 or -1 for strand.")
 
@@ -164,6 +181,10 @@ class LIET:
         self.data['pos_reads'] = pos_reads
         self.data['neg_reads'] = neg_reads
         self.data['pad'] = pad
+
+        # Shifted positive/negative strand coordinate ranges for fitting
+        self.data['pos_coord_fit_range'] = (pstart, pstop)
+        self.data['neg_coord_fit_range'] = (nstart, nstop)
 
 
 
@@ -244,6 +265,35 @@ class LIET:
                     self.priors[p] = prior
         else:
             print(self.set_priors.__doc__)
+
+
+
+    def set_default_priors(self):
+        '''
+        This function is an alternative to .set_priors(). It assigns a default 
+        set of values to the model priors. This function is helpful for manual 
+        fitting or to debug parts of the fit routine.
+
+        WARNING: These are not biologically optimal values for the priors!
+        They are merely simple values for easy interpretability.
+        '''
+        default_priors = {
+            'mL' : {'dist' : 'normal', 'mu' : 0, 'sigma' : 500},
+            'sL' : {'dist' : 'exponential', 'offset' : 1, 'tau' : 100},
+            'tI' : {'dist' : 'exponential', 'offset' : 1, 'tau' : 100},
+            'mT' : {'dist' : 'exponential', 'offset' : 1, 'tau' : 100},
+            'sT' : {'dist' : 'exponential', 'offset' : 1, 'tau' : 100},
+            'w' : {'dist' : 'dirichlet', 'alpha_LI' : 1, 'alpha_E' : 1, 
+                'alpha_T' : 1, 'alpha_B' : 1},
+            'mL_a' : {'dist' : 'normal', 'mu' : 0, 'sigma' : 500},
+            'sL_a' : {'dist' : 'exponential', 'offset' : 1, 'tau' : 100},
+            'tI_a' : {'dist' : 'exponential', 'offset' : 1, 'tau' : 100}
+        }
+        for p, prior in default_priors.items():
+            if p not in self._p.keys():
+                raise ValueError(f"'{p}' not acceptable parameter name")
+            else:
+                self.priors[p] = prior
 
 
 
@@ -378,28 +428,6 @@ class LIET:
         # Define model components (LI, E, T) --- sense strand
         with self.model:
             # Custom Elongation distribution ==================================
-# OLDDEST APPROACH
-#            def _emg_cdf(x, mu, sigma, tau):
-#                # z = (x - mu) / sigma
-#                def _norm_cdf(z):
-#                    return 0.5 * (1 + tt.erf(z / tt.sqrt(2.0)))
-
-#                z = (x - mu) / sigma
-#                k = sigma / tau
-#                exparg = 0.5*(k**2) - z*k
-#                cdf =  _norm_cdf(z) - tt.exp(exparg) * _norm_cdf(z - k)
-
-#                z = (x - mu) / sigma
-#                invK = sigma / tau
-
-#                exparg = invK * (0.5 * invK - z)
-                # Sum of logs instead of product avoids overflow error
-#                logprod = exparg + tt.log(_norm_cdf(z - invK))
-                # Abs to avoid neg vals in diff at small prob (rounding error)
-#                cdf = tt.abs_(_norm_cdf(z) - tt.exp(logprod))
-
-#                return cdf
-
             # CDF/logCDF components
             def _emg_cdf(x, mu, sigma, tau):
                 rv = pm.ExGaussian.dist(mu=mu,sigma=sigma, nu=tau)
@@ -418,71 +446,59 @@ class LIET:
             def _log_norm_sf(x, mu, sigma):
                 return pm.distributions.dist_math.normal_lccdf(mu, sigma, x)
 
-
-            def elong_logp(x, mL, sL, tI, mT, sT):
+            def _elong_numeric_norm(mL, sL, tI, mT, sT):
                 # Compute norm factor by integrating over entire distribution
                 _n = 5 #number of stdevs for numerical normalization
                 _min = tt.floor(tt.min([mL-_n*sL, mT-_n*sT]))
                 _max = tt.ceil(tt.max([mL+_n*np.sqrt(sL**2+tI**2), mT+_n*sT]))
 
-#                _min = tt.floor(tt.min([
-#                    self._p['mL'] - _n*self._p['sL'], 
-#                    self._p['mT'] - _n*self._p['sT']
-#                ]))
-#                _max = tt.ceil(tt.max([
-#                    self._p['mL'] + _n*np.sqrt(self._p['sL']**2 
-#                    + self._p['tI']**2), 
-#                    self._p['mT'] + _n*self._p['sT']
-#                ]))
                 _x = tt.arange(_min, _max, dtype="int32")
 
                 _norm_array = (
                     _emg_cdf(_x, mu=mL, sigma=sL, tau=tI) 
                     *_norm_sf(_x, mu=mT, sigma=sT)
                 )
-#                _norm_array = (
-#                    _emg_cdf(
-#                        _x, 
-#                        mu=self._p['mL'], 
-#                        sigma=self._p['sL'], 
-#                        tau=self._p['tI']
-#                    )
-#                    * _norm_sf(
-#                        _x, 
-#                        mu=self._p['mT'], 
-#                        sigma=self._p['sT']
-#                    )
-#                )
+
                 _log_norm_factor = tt.log(tt.sum(_norm_array))
+
+                return _log_norm_factor
+
+            def _elong_analytic_norm(mL, sL, tI, mT, sT):
+                Delta = pm.math.abs(mT - mL)
+                sigma_square = pm.math.sqr(sL) + pm.math.sqr(sT)
+                sigma_sqrt = pm.math.sqrt(sigma_square)
+                Sigma = sigma_square / tI
+
+                log_Phi1 = pm.Normal.logcdf(Delta/sigma_sqrt, mu=0, sigma=1)
+                log_phi1 = pm.Normal.logp(Delta/sigma_sqrt, mu=0, sigma=1)
+                log_Phi2 = pm.Normal.logcdf((Delta-Sigma)/sigma_sqrt, 
+                                            mu=0, sigma=1)
+
+                term1 = pm.math.exp(pm.math.log(Delta) + log_Phi1)
+                term2 = pm.math.exp(pm.math.log(sigma_sqrt) + log_phi1)
+                term3 = pm.math.exp(pm.math.log(tI) + log_Phi1)
+                term4 = pm.math.exp(pm.math.log(tI)
+                                    -(Delta - Sigma/2)/tI + log_Phi2)
+
+                _log_norm_factor = pm.math.log(term1 + term2 - term3 + term4)
+                return _log_norm_factor
+
+
+            def elong_logp(x, mL, sL, tI, mT, sT):
+
+                _log_norm_factor = _elong_analytic_norm(mL, sL, tI, mT, sT)
 
                 # Unnormalized dist values (log(CDF*SF) = log(CDF) + log(SF))
                 _log_unscaled = (
                     _log_emg_cdf(x, mu=mL, sigma=sL, tau=tI)
                     +_log_norm_sf(x, mu=mT, sigma=sT)
                 )
-#                _log_unscaled = (
-#                    _log_emg_cdf(
-#                        x, 
-#                        mu=self._p['mL'], 
-#                        sigma=self._p['sL'], 
-#                        tau=self._p['tI']
-#                    ) 
-#                    + _log_norm_sf(
-#                        x, 
-#                        mu=self._p['mT'],
-#                        sigma=self._p['sT']
-#                    )
-#                )
 
                 # Normalize distribution in logscale
                 log_pdf = _log_unscaled - _log_norm_factor
-                                                                            # NOT SURE IF I NEED THIS BOUNDING
-#                log_pdf = pm.distributions.dist_math.bound(_log_unscaled - _log_norm_factor, self._p['mL'] < self._p['mT'])
 
                 return log_pdf
                 #==============================================================
-            # Debugging print statement (can remove later)
-#            mL_print = tt.printing.Print('mL')(self._p['mL'])
 
             # Distribution for the Loading/Initiation phase (native to pymc)
             LI_pdf = pm.ExGaussian.dist(
@@ -492,7 +508,7 @@ class LIET:
                 nu=self._p['tI']
             )
 
-            # Convert Aesara log-prob func into pymc distribution variable
+            # Convert PyTensor log-prob func into pymc distribution variable
             E_pdf = pm.DensityDist.dist(
                 self._p['mL'],
                 self._p['sL'],
@@ -502,8 +518,7 @@ class LIET:
                 logp=elong_logp,
                 class_name='E_pdf'
             )
-#            E_pdf = pm.DensityDist.dist(class_name='E_pdf', logp=elong_logp)
-            
+
             # Distribution for the Termination phase (native to pymc)
             T_pdf = pm.Normal.dist(mu=self._p['mT'], sigma=self._p['sT'])
 
@@ -515,16 +530,15 @@ class LIET:
         # Define sense-strand full model (with or without background)
         if background == True and self.priors['w']['alpha_B'] != 0:
             
-            xmin = -1 + min(
-                self.data['pos_reads'].min(), 
-                self.data['neg_reads'].min()
-            )
-            xmax = 1 + max(
-                self.data['pos_reads'].max(), 
-                self.data['neg_reads'].max()
-            )
+            if self.data['annot']['strand'] == +1:
+                sense_xmin, sense_xmax = self.data['pos_coord_fit_range']
+            else:
+                sense_xmin, sense_xmax = self.data['neg_coord_fit_range']
+
+            #print(f"sense min,max: {sense_xmin}, {sense_xmax}")
+            
             with self.model:
-                back_pdf = pm.Uniform.dist(lower=xmin, upper=xmax)
+                back_pdf = pm.Uniform.dist(lower=sense_xmin, upper=sense_xmax)
 
             components = [LI_pdf, E_pdf, T_pdf, back_pdf]
         else:
@@ -556,13 +570,31 @@ class LIET:
                 t_a = self._p['tI']
             
             if background == True and self.priors['w']['alpha_B'] != 0:
+                
+                # This is confusing, but it's because of the coordinate 
+                # transform that the max/min change. This assumes range shift 
+                # has occurred.
+                if self.data['annot']['strand'] == -1:
+                    anti_xmin, anti_xmax = self.data['pos_coord_fit_range']
+                else:
+                    anti_xmin, anti_xmax = self.data['neg_coord_fit_range']
+                    
+                #print(f"anti min,max: {anti_xmin}, {anti_xmax}")
+                
                 with self.model:
+                    # Anti-sense background component
+                    back_a_pdf = pm.Uniform.dist(
+                        lower=anti_xmin, 
+                        upper=anti_xmax
+                    )
+
+                    # Anti-sense LI component
                     LI_a_pdf = pm.ExGaussian.dist(
                         mu=m_a, 
                         sigma=s_a, 
                         nu=t_a
                     )
-                    components = [LI_a_pdf, back_pdf]
+                    components = [LI_a_pdf, back_a_pdf]
 
                 w_a = [self.priors['w']['alpha_LI'], 
                     self.priors['w']['alpha_B']]
@@ -581,7 +613,7 @@ class LIET:
                 with self.model:
                     LIET_a_pdf = pm.ExGaussian(
                         'LIET_a_pdf',
-                        mu=self.m_a,
+                        mu=m_a,
                         sigma=s_a,
                         nu=t_a,
                         observed=self.data[antisense_reads]
@@ -632,7 +664,6 @@ class LIET:
                 mean = np.mean(samps, axis=0)
                 median = np.median(samps, axis=0)
                 std = sp.stats.tstd(samps, axis=0)
-#                mode = sp.stats.mode(samps, axis=0)[0][0]
                 mode = kde_mode(samps)
                 skew = sp.stats.skew(samps, axis=0)
                 skewtest = sp.stats.skewtest(samps, axis=0).pvalue
@@ -667,7 +698,6 @@ class LIET:
                 prior_samp = pm.sample_prior_predictive(
                     samples=10000, 
                     var_names=non_none_params
-                    #var_names = self._p.keys()
                 )
 
             # Plot priors
@@ -695,7 +725,8 @@ class LIET:
         Plots the posterior distributions and (if computed) identifies the 
         statistics for each parameter.
 
-        TODO: Fix the save kwarg, add if statement to check existence of stats for axvlines
+        TODO: Fix the save kwarg, add if statement to check existence of stats 
+        for axvlines
         '''
 
         if self.results['posteriors']:

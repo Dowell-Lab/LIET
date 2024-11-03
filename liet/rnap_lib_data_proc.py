@@ -3,7 +3,91 @@ import numpy as np
 import copy
 from collections import defaultdict
 
-# GENE ANNOTATION HANDLING ====================================================
+# GENE ANNOTATION AND PAD FILE HANDLING =======================================
+
+def pad_file_loader(pad_file):
+    '''
+    This function is used for when a gene padding file is specified in place 
+    of using the single 5'/3' padding tuple. This allows for each gene to have 
+    its own unique set of padding lengths. This function is utilized in the 
+    annot_BED6_loader() function.
+
+    File format: "geneID<TAB>5'pad,3'pad"
+
+    Gene ID's must include all those from the annotation file.
+    '''
+    pad_dict = {}
+
+    try:
+        with open(pad_file, 'r') as pf:
+
+            for gene_line in pf:
+                gid, pad = gene_line.strip().split('\t')
+                pad = tuple(int(i) for i in pad.strip().split(','))
+                
+                if len(pad) != 2:
+                    raise ValueError
+
+                pad_dict[gid] = pad
+                
+    except FileNotFoundError:
+        print(f"FileNotFoundError: Padding file does not exist --- "
+            "'{pad_file}'")
+    except ValueError:
+        print(f"ValueError: Improper format in padding file "
+        "'{pad_file}' --- line: '{gene_line}'")
+        print("Correct line format: '<gene_id>TAB<5'pad int>,<3'pad int>'")
+
+    return pad_dict
+
+
+def pad_dict_generator(gene_id_list, default_pad, pad_file):
+    '''
+    This function creates the padding dictionary using two sources: 1) the pad 
+    file (optional) which contains gene-specific pad values for both ends of 
+    the gene and 2) the default padding values specified in the LIET config 
+    file.
+
+    Parameters
+    ----------
+    gene_id_list : list
+        List of gene ID's that are read in from the annotation file.
+
+    default_pad : tuple
+        Tuple containing a 5' and 3' padding value (both integers). These 
+        values come from the config file (param PAD)
+
+    pad_file : string
+        Full path to the padding file
+
+    Returns
+    -------
+    gene_pads : dict
+        The dictionary containing (5' pad, 3' pad) tuples for each of the 
+        gene ID's input via the annotation file. 
+        Format: {'gene ID': (pad5, pad3), ...}
+    '''
+    if pad_file in ['', 'None', None]:
+        print('WARNING: A padding file was not provided.')
+        gene_pads = {gid: default_pad for gid in gene_id_list}
+        print(f"PAD FILE: {pad_file}")
+    else:
+        pads_from_file = pad_file_loader(pad_file)
+        gene_pads = {}
+
+        for gid in gene_id_list:
+            # Gene pad from file
+            if gid in pads_from_file.keys():
+                gene_pads[gid] = pads_from_file[gid]
+            # Gene pad default
+            else:
+                gene_pads[gid] = tuple(default_pad)
+
+    for gid, pad in gene_pads.items():
+        print(gid, pad)
+    
+    return gene_pads
+
 
 def annotation(chrom=None, start=None, stop=None, strand=None):
     
@@ -18,18 +102,30 @@ def annotation(chrom=None, start=None, stop=None, strand=None):
     return out
 
 
-def annot_BED6_loader(annot_file, pad5, pad3):
+def annot_BED6_loader(annot_file):
     '''
     Loads annotations from BED6 file into a dictionary and then sorts 
     them by genomic coordinate and strand. Returns sorted dict of form:
     annot_sorted: {'chr#': {(start, stop, strand): gene_id, ...}, ...}
-    pad: {gene_id: (pad5, pad3), ... }
     
     Only uses the following fields from the BED6 formatted input: 
     chr (0), start (1), stop (2), name (3), strand (5)
+
+    Parameters
+    ----------
+    annot_file : string
+        Full path to annotation file containing gene ID's and annotations
+        to which LIET is to be applied. File format: BED6, i.e. 
+        (tab delimited: chr, start, stop, gene_id, score, strand)
+
+    Returns
+    -------
+    annot_sorted : dict
+        Annotation dictionary sorted by chromosome and region with gene ID 
+        values. Format: {'chrom': {(start, stop, strand): gene_id, ...}, ...}
+
     '''
     strand_dict = {'+': 1, '-': -1}
-    pad = {}
 
     # Initialize annotation dictionary with chrom ID's in annot file
     with open(annot_file, 'r') as af:
@@ -58,8 +154,6 @@ def annot_BED6_loader(annot_file, pad5, pad3):
                 strnd = strand_dict[line[5]]
                 annot[chrom][(start, stop, strnd)] = id
 
-                pad[id] = (int(pad5), int(pad3))
-
             except KeyError:
                 raise KeyError(f"One or both keys {chrom} and {id} do not"
                     "exist.")
@@ -75,7 +169,7 @@ def annot_BED6_loader(annot_file, pad5, pad3):
         else:
             continue
     
-    return annot_sorted, pad
+    return annot_sorted
 
 
 def annot_loader(annot_file):
@@ -167,7 +261,7 @@ def config_loader(config_file):
     prior_names = ['mL', 'sL', 'tI', 'mT', 'sT', 'w', 'mL_a', 'sL_a', 'tI_a']
 
     config = {
-        'FILES': {'ANNOTATION':'', 'BEDGRAPH':'', 'RESULTS':''},
+        'FILES': {'ANNOTATION':'', 'BEDGRAPH':'', 'RESULTS':'', 'PAD_FILE':''},
         'MODEL': {'ANTISENSE':None, 'BACKGROUND':None, 'FRACPRIORS':None}, 
         'PRIORS': {'mL':None, 'sL':None, 'tI':None, 'mT':None, 'sT':None,
             'mL_a':None, 'sL_a':None, 'tI_a':None, 'w':None}, 
@@ -198,10 +292,6 @@ def config_loader(config_file):
             pval = str(line[1])
             # PRIORS
             if pname in prior_names:
-                #pval = [e.strip() for e in pval.strip().split(',')]
-                #pval = [pval[0], [float_int_cast(e) for e in pval[1:]]]
-                #config[category][pname] = pval
-
                 pval = [e.strip() for e in pval.strip().split(',')]         #### NEED TO DO SOMETHING HERE TO HAND IF pval IS None
                 
                 pval_dict = {}
@@ -216,7 +306,8 @@ def config_loader(config_file):
             elif (pname == 'ANNOTATION' or 
                 pname == 'BEDGRAPH_POS' or
                 pname == 'BEDGRAPH_NEG' or
-                pname == 'RESULTS'):
+                pname == 'RESULTS' or
+                pname == 'PAD_FILE'):
                 config[category][pname] = pval
             # MODEL
             elif (pname == 'ANTISENSE' or 
@@ -343,50 +434,6 @@ def prior_config(priors, tss, tcs, frac_priors=False):
     return shifted_priors
 
 
-
-# def prior_config_old(priors, tss, tts):
-#     '''
-#     This function formats the priors dict generated by config_loader() so that 
-#     it conforms to the correct format to be loaded into a LIET model instance. 
-#     The input 'priors' is still in string format and must be evaluated for any 
-#     annotation offsets then converted to float/int. The two reference points 
-#     must be range shifted if RANGE_SHIFT=True in config
-    
-#     NOTE: This is a silly function, but I'm currently keeping it separate in 
-#     the event that I change the way the config/initialization process is done.
-#     '''
-#     #absolute_priors = ['sL', 'tI', 'sT', 'w', 'sL_a', 'tI_a']
-#     relative_priors = {'mL': tss, 'mT': tts, 'mL_a': tss}
-#     shifted_priors = {}
-
-#     for pname, pval in priors.items():
-        
-#         new_val = copy.deepcopy(pval)
-
-#         if pname in relative_priors.keys():
-
-#             if pval != None:
-
-#                 ref = relative_priors[pname]
-
-#                 if new_val[0] == 'uniform':
-#                     new_val[1] = [ref + e for e in new_val[1]]
-#                 elif new_val[0] == 'normal':
-#                     new_val[1][0] += ref
-#                 elif new_val[0] == 'exponential':
-#                     new_val[1][1] += ref
-#                 elif new_val[0] == 'gamma':
-#                     new_val[1][2] += ref
-#                 elif new_val[0] == 'wald':
-#                     new_val[1][2] += ref
-#                 elif new_val[0] == 'constant':
-#                     new_val[1][0] += ref            
-
-#         shifted_priors[pname] = new_val
-            
-#     return shifted_priors
-
-
 # BEDGRAPH HANDLING ===========================================================
 
 def bgline_cast(bgline):
@@ -409,21 +456,6 @@ def bg2d(bglist):
         return reads
     else:
         return {}
-
-# def bg2d(bglist): 
-#     '''Convert bedgraph line <bglist> (len-4 list) to a read dict'''
-#     start = int(bglist[1])
-#     stop = int(bglist[2])
-#     count = int(bglist[3])
-    
-#     if count >= 0:
-#         preads = {i:count for i in range(start, stop)}
-#         nreads = {}
-#         return preads, nreads
-#     else:
-#         preads = {}
-#         nreads = {i:-count for i in range(start, stop)}
-#         return preads, nreads
 
 
 # def bg2l(bglist):
@@ -476,7 +508,8 @@ def chrom_order_reader(bedgraph_file1, bedgraph_file2):
         print("WARNING: BedGraph files do not have all the same chromosomes.", 
             file=sys.stderr)
     
-    chr_order = dict([tuple(reversed(t)) for t in enumerate(chrom1) if t[1] in common])
+    chr_order = dict([tuple(reversed(t)) 
+                      for t in enumerate(chrom1) if t[1] in common])
     return chr_order
     
 
@@ -539,108 +572,6 @@ def add_bg_dict(bglist, begin, end, reads_dict):
     # Absolute value accounts for neg-strand BG files with neg count values
     if abs(ct) > 0:
         reads_dict.update(reads)
-
-
-# def add_bg_dict(bglist, begin, end, preads, nreads):
-#     '''
-#     Adds reads from <bglist> to correct read dictionary <preads> and <nreads> 
-#     for annotation ranging from <begin> to <end>.
-#     '''
-#     ch, i, f, ct = bglist
-    
-#     reads = bg2d([ch, max(i, begin), min(f, end), ct])
-    
-#     if ct > 0:
-#         preads.update(reads)
-#     elif ct < 0:
-#         nreads.update(reads)
-
-
-# def add_bgl(bglist, begin, end, preads, nreads):
-#     '''
-#     Adds reads from <bglist> to read lists <preads> and <nreads> for 
-#     annotation ranging from <begin> to <end>.
-#     '''
-#     ch, i, f, ct = bglist
-    
-#     p, n = bg2l([ch, max(i, begin), min(f, end), ct])
-    
-#     preads.extend(p)
-#     nreads.extend(n)
-
-
-# def bgreads(bg, current_bgl, chromosome, begin, end):
-#     '''
-#     Primary method for processing bedgraph lines and converting them to read
-#     lists appropriate for loading into LIET class instance. 
-
-#     Parameters
-#     ----------
-#     bg : file object
-#         Bedgraph file object containing read count data. Must be in standard 
-#         four-column format (chr start stop count) and be sorted.
-    
-#     current_bgl : list
-#         List containing information from the most recent bedgraph line, prior 
-#         to calling this function. Elements must be cast to appropriate data 
-#         type. Format: [chr, start, stop, count]
-
-#     chromosome : string
-#         String specifying the chromosome of the annotation being evaluated. 
-#         Must be in standard format: 'chr#'
-    
-#     begin : int
-#         First genomic coordinate of the annotation being evaluated.
-
-#     end : int
-#         Last genomic coordinate of the annotation being evaluated.
-
-
-#     Returns
-#     -------
-#     bglist : list
-#         List containing information from most recent bedgraph line. The first 
-#         one downstream of annotation. Same format as <current_bgl>
-
-#     preads : dict
-#         Counter style dict containing the read counts on the positive strand 
-#         between genomic coordinates <begin> and <end>
-
-#     nreads : dict
-#         Counter style dict containing the read counts on the negative strand 
-#         between genomic coordinates <begin> and <end>
-#     '''
-#     preads = {}
-#     nreads = {}
-    
-#     # Process current line
-#     loc = bglist_check(current_bgl, chromosome, begin, end)
-#     # Overlapping
-#     if loc == 0:
-#         add_bg_dict(current_bgl, begin, end, preads, nreads)
-#     # Downstream
-#     elif loc == -1:
-#         return current_bgl, preads, nreads
-#     # Upstream
-#     else:
-#         pass
-    
-#     # Iterate through bedgraph until reaching first downstream line
-#     for bgline in bg:
-#         bglist = bgline_cast(bgline)
-#         loc = bglist_check(bglist, chromosome, begin, end)
-#         # Upstream
-#         if loc == 1:
-#             continue
-#         # Overlap
-#         elif loc == 0:
-#             add_bg_dict(bglist, begin, end, preads, nreads)
-#         # Downstream
-#         elif loc == -1:
-#             return bglist, preads, nreads
-#     # Return same thing if hits end of file
-#     else:
-#         return bglist, preads, nreads
 
 
 def bgreads(bg, current_bg_list, chromosome, begin, end, chr_order):
@@ -740,7 +671,6 @@ def pad_calc(start, stop, strand, pad):
         Alternatively, '(0.1, 0.2)' for stop-start=100bp loci corresponds to
         '(10, 20)' in absolute numbers (round to nearest integer).
 
-
     Returns
     -------
     adj_start : int
@@ -817,7 +747,7 @@ def bedgraph_loader(bgp_file, bgn_file, annot_dict, pad_dict, chr_order=None):
         ## MAIN LOOP OVER ANNOTATIONS =========================================
         for chromosome, annotations in annot_dict.items():
 
-            for region, gene_id in annotations.items():                     # I SHOULD CHECK THIS IS SORTED
+            for region, gene_id in annotations.items():
             
                 start, stop, strand = region
                 
@@ -975,7 +905,6 @@ def gene_data(bedgraph, gene, pad_frac):
     return xvals, data
 
 
-
 def rng_shift(gene, xvals, data):
     '''
     Adjusts the gene coordinates ('gene' <dict>) so that they are oriented 
@@ -1041,7 +970,6 @@ def overlap_check3(annotations, pad=0):
         return False
 
 
-
 def bg_iterator(bgfile, begin, end):
     '''
     This function takes a bedgraph file generator object and iterates through 
@@ -1061,7 +989,6 @@ def bg_iterator(bgfile, begin, end):
             return [ch, st, sp, ct]
         else:
             return None
-
 
 
 def bgreads_old(bgfile, begin, end):
