@@ -65,7 +65,7 @@ conda activate your_env_name
 
 The software can be run in a number of ways, but we generally recommend using a HPC system with a workload manager like SLURM. The `./liet/liet_exe_mp.py` script is the main executable for fitting LIET to batches of genes. Within your job submission script you run the script as follows:
 ```
-$ python /path/to/file/liet_exe_mp.py --config /path/to/config_file
+$ python /path/to/liet_exe_mp.py --config /path/to/config_file
 ```
 The config file contains references to all inputs required to run the fitting, the details of which are outlined below. The `liet_exe_mp.py` script must be in the same directory as the other LIET library files as it imports from them.
 
