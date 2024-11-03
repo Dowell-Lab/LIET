@@ -23,19 +23,19 @@ The LIET model parameterizes the transcription process by annotating nascent run
 | Parameter       | LIET Output Value                | Units                 | Description                                              |
 |-----------------|----------------------------------|-----------------------|----------------------------------------------------------|
 | $\mu_L$         | `mL`                                 |          Positions (base pairs)             | Polymerase loading position                              |
-| $\mu_L'$        |       `mL_a`                             |        Positions (base pairs)                 | Polymerase antisense loading position                    |
+| $\mu'_L$        |       `mL_a`                             |        Positions (base pairs)                 | Polymerase antisense loading position                    |
 | $\sigma_L$      |        `sL`                          |            Lengths (base pairs)             | Polymerase loading uncertainty                           |
-| $\sigma_L'$     |           `sL_a`                       |         Lengths (base pairs)              | Polymerase antisense loading uncertainty                 |
-| $T_{I}$         |                `tI`                  |           Lengths (base pairs)            | Polymerase initiation length                             |
-| $T_{I}'$        |             `tI_a`                     |           Lengths (base pairs)            | Polymerase antisense initiation length                   |
+| $\sigma'_L$     |           `sL_a`                       |         Lengths (base pairs)              | Polymerase antisense loading uncertainty                 |
+| $\tau_{I}$         |                `tI`                  |           Lengths (base pairs)            | Polymerase initiation length                             |
+| $\tau'_{I}$        |             `tI_a`                     |           Lengths (base pairs)            | Polymerase antisense initiation length                   |
 | $\mu_T$         |                  `mT`                |          Positions (base pairs)              | Polymerase dissociation position                         |
 | $\sigma_T$      |                     `sT`             |             Lengths (base pairs)           | Polymerase dissociation uncertainty                      |
-| $W_{LI}$        |                   First value in `w` list               |       Weights (fraction %)                | Proportion of reads that fall into loading and initiation|
-| $W_{E}$         |          Second value in `w` list                         |         Weights (fraction %)               | Proportion of reads that fall into elongation            |
-| $W_{T}$         |              Third value in `w` list                     |           Weights (fraction %)             | Proportion of reads that fall into termination           |
-| $W_{B}$         |                  Fourth value in `w` list                 |            Weights (fraction %)            | Proportion of reads that fall into background signal     |
-| $W_{B}'$        |             Second value in `w_a` list                      |           Weights (fraction %)             | Proportion of reads that fall into antisense background signal |
-| $W_{LI}'$       |                   First value in `w_a` list                |          Weights (fraction %)              | Proportion of reads that fall into antisense loading and initiation |
+| $w_{LI}$        |                   First value in `w` list               |       Weights (fraction %)                | Proportion of reads that fall into loading and initiation|
+| $w_{E}$         |          Second value in `w` list                         |         Weights (fraction %)               | Proportion of reads that fall into elongation            |
+| $w_{T}$         |              Third value in `w` list                     |           Weights (fraction %)             | Proportion of reads that fall into termination           |
+| $w_{B}$         |                  Fourth value in `w` list                 |            Weights (fraction %)            | Proportion of reads that fall into background signal     |
+| $w'_{B}$        |             Second value in `w_a` list                      |           Weights (fraction %)             | Proportion of reads that fall into antisense background signal |
+| $w'_{LI}$       |                   First value in `w_a` list                |          Weights (fraction %)              | Proportion of reads that fall into antisense loading and initiation |
 
 ## Installation 
 1. To install LIET, first set up Miniconda on the cluster you are running LIET on. Instructions on how to do this are on the anaconda website [here](https://docs.anaconda.com/miniconda/). Once you are on the website, scroll to the "quick command line install" and run the appropriate command based on your operating system (eg: macOS, Linux, or Windows). 
