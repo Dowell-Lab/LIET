@@ -83,7 +83,7 @@ def elongation_analytic_norm_logged(m0, s0, t0, m1, s1):
     return log_normalization_factor
 
 
-def elongation_pdf_alt(x, m0, s0, t0, m1, s1):
+def elongation_pdf_alt0(x, m0, s0, t0, m1, s1):
     '''
     This function computes the elongation PDF with the analytic normalization 
     method computed by elongation_analytic_norm_logged(), instead of the 
@@ -106,6 +106,34 @@ def elongation_pdf_alt(x, m0, s0, t0, m1, s1):
 
     # PDF = (CDF*SF)/A = exp[log((CDF*SF)/A)] = exp[log(CDF)+log(SF)-log(A)]
     pdf = np.exp(log_cdf + log_sf - log_norm_fact)
+
+    return pdf
+
+
+def elongation_pdf_alt(x, m0, s0, t0, m1, s1):
+    '''
+    This function computes the elongation PDF with the analytic normalization 
+    method computed by elongation_analytic_norm_logged(), instead of the 
+    numeric integration method like elongation_pdf() above. They both should 
+    give the same result (up to limit of numeric precision), but this one is 
+    consistent with the way the model is computed in the PyMC representation.
+
+    The PDF is computed by exp[log(CDF) + log_SF - log(A)] where A is the 
+    normalization constant from Eq. S.20.
+    '''
+
+    if m0 <= m1:
+        cdf = np.nan_to_num(stats.exponnorm.cdf(x, t0/s0, m0, s0), nan=0.0)
+        sf = np.nan_to_num(stats.norm.sf(x, m1, s1), nan=0.0)
+    else:
+        cdf = np.nan_to_num(stats.exponnorm.cdf(invert(x, m0), t0/s0, m0, s0), 
+                            nan=0.0)
+        sf = np.nan_to_num(stats.norm.sf(invert(x, m1), m1, s1), nan=0.0)
+    
+    log_norm_fact = elongation_analytic_norm_logged(m0, s0, t0, m1, s1)
+
+    # PDF = (CDF*SF)/A
+    pdf = cdf*sf/np.exp(log_norm_fact)
 
     return pdf
 
