@@ -165,9 +165,10 @@ def elongation_rvs(x, m0, s0, t0, m1, s1, size=1000, seed=42):
 
     pdf = elongation_pdf_alt(xfull, m0=m0, s0=s0, t0=t0, m1=m1, s1=s1)
 
+    # THIS IS NO LONGER NEEDED SINCE THE NORMALIZATION IS DONE ANALYTICALLY
     # Adjust pdf to sum to 1.0 (residue from finite normalization integration)
-    residue = 1.0 - sum(pdf)
-    pdf[-1] = pdf[-1] + abs(residue)
+    #residue = 1.0 - sum(pdf)
+    #pdf[-1] = pdf[-1] + abs(residue)
         
     np.random.seed(seed=seed)
     samples = np.random.choice(xfull, size=size, replace=True, p=pdf)
