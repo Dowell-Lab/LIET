@@ -130,6 +130,10 @@ def elongation_pdf_alt(x, m0, s0, t0, m1, s1):
                             nan=0.0)
         sf = np.nan_to_num(stats.norm.sf(invert(x, m1), m1, s1), nan=0.0)
     
+    # Make sure arrays are positive (CDF may produce neg values in shoulders)
+    cdf = np.absolute(cdf)
+    sf = np.absolute(sf)
+
     log_norm_fact = elongation_analytic_norm_logged(m0, s0, t0, m1, s1)
 
     # PDF = (CDF*SF)/A
