@@ -1,3 +1,5 @@
+[![DOI](https://zenodo.org/badge/319449116.svg)](https://doi.org/10.5281/zenodo.15015166)
+
 # Loading Initiation Elongation Termination (LIET) Model
 ## Table of contents
 1. [LIET model description](#liet-model-description) - What is the LIET model and how does it work
