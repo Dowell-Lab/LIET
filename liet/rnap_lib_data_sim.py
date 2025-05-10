@@ -193,6 +193,192 @@ def background_rvs(x, size=10, seed=42):
 
 ## Full model PDF and RVS =====================================================
 
+def remove_wb(weights):
+    """
+    Description: Remove background from the weights but maintain scaling. For example, weights of [0.25,0.25,0.25,0.25] become [0.33,0.33,0.33]. This function is used to make a pdf that removes the background component.
+    
+    Parameters
+    ----------
+    weights: numpy array or list of weights where the last in the list is w_B (weight of background).
+    
+    Returns
+    -------
+    new_weights: list of the new scaled weights. 
+    """
+    weights = weights[0:len(weights)-1]
+    print(weights)
+    new_weights = weights/sum(weights)
+    return new_weights
+
+# for percentile analysis
+def get_nonback_gene_pdfs(
+    xvals=range(-500000, 500000), 
+        mu0_p=None, 
+        sig0_p=None, 
+        tau0_p=None, 
+        mu1_p=None, 
+        sig1_p=None, 
+        mu0_n=None, 
+        sig0_n=None, 
+        tau0_n=None, 
+        mu1_n=None, 
+        sig1_n=None, 
+        w_p=[0.7, 0.2, 0.09, 0.01],
+        w_n=[0.99, 0, 0, 0.01]
+):
+    '''
+    Description: This function is used to get the pdfs of features not including background for getting the CDFs.
+    It returns the pdfs to allow for their use in downstream graphing.
+    Hope's changes to Jacob's original gene_model function:
+    - I do not have any inversion and instead just treat the negative strand as positive strand coordinates (- values --> + values). Although elongation has internal inversion, this won't be a problem since it only inverts if mT < mL which will never be the case with my coordinates although I added an "Inverting" to be printed if it does. This simply means that the pdf must be plotted backwards (pdf_n[::-1]). This code was tested in /Users/hoto7260/projects/Length/02_Genomewide/GR/Isolated/Test_LIET_percentile.ipynb
+    - The pdfs produced do NOT include background. The weights are rescaled to address this with function remove_wb
+    - I only do the pdfs.
+    - I calculate the pdfs with arbitrarily massive x scales (default is 1,000,000 on both sides) for proper cdf calculation.
+    - Warning: This and gene_model assume that the background weight is included.
+    
+    Parameters
+    ----------
+    xvals : numpy array
+        Genomic coordinates on which to evaluate the model. Array of integers. Default is -500,000 to 500,000
+
+    mu0_p, sig0_p, tau0_p : float kwargs
+        Model parameters specifying the positive-strand Loading/Initiation EMG
+    
+    mu1_p, sig1_p : float kwargs
+        Model parameters specifying the positive-strand Termination gaussian
+    
+    mu0_n, sig0_n, tau0_n : float kwargs
+        Model parameters specifying the negative-strand Loading/Initiation EMG
+    
+    mu1_n, sig1_n : float kwargs
+        Model parameters specifying the negative-strand Termination gaussian
+
+    w_p : list (length == 4 or 2)
+        Weights specifying Loading/Initiation, Elongation, Termination and 
+        Background on the positive strand. In order: [LI, E, T, B]. Weights 
+        must sum to 1.
+    
+    w_n : list (length == 4 or 2)
+        Weights specifying Loading/Initiation, Elongation, Termination and 
+        Background on the negative strand. In order: [LI, E, T, B]. Weights 
+        must sum to 1. NOTE: if `w_n = None`, no pdf or rvs will be generated
+        for the negative strand.
+
+
+    Returns
+    -------
+    pdf_p, pdf_n: numpy arrays
+        Returned probability density functions and random variable samples for 
+        the two strands. Number of arrays returned depends on <rvs> and <pdf> 
+        boolian parameters.
+        
+    
+    '''
+        # Check for correct orientation of loading and termination positions
+    if mu1_p != None and mu0_p != None:
+        if abs(mu1_p) < abs(mu0_p):
+            raise ValueError('Loading position parameter <mu0_p> must be '
+                'upstream of termination position <mu1_p>.')
+    if mu1_n != None and mu0_n != None:
+        if abs(mu1_n) < abs(mu0_n):
+            raise ValueError('Loading position parameter <mu0_n> must be '
+                'upstream of termination position <mu1_n>.')
+
+    # Recast weights
+    w_p = np.array(w_p)
+    w_n = np.array(w_n)
+
+    # Check and unpack weights
+    if w_p.all() != None:
+        if len(w_p) == 2:
+            w_p = np.array([w_p[0], 0.0, 0.0, w_p[1]])
+        if round(sum(w_p), 5) == 1.0:
+            # Rescale weights to remove the background
+            w_p = remove_wb(w_p)
+            wLI_p, wE_p, wT_p = w_p
+        else:
+            raise ValueError('Weights parameter <w_p> must sum to 1.0')
+    if w_n.all() != None:
+        if len(w_n) == 2:
+            w_n = np.array([w_n[0], 0.0, 0.0, w_n[1]])
+        if round(sum(w_n), 5) == 1.0:
+            w_n = remove_wb(w_n)
+            wLI_n, wE_n, wT_n = w_n
+        else:
+            raise ValueError('Weights parameter <w_n> must sum to 1.0')
+    
+
+    # Generate PDF(s)
+    # Positive strand pdf
+    if w_p.all() != None:
+        pdf_p = np.zeros(len(xvals))
+
+        if wLI_p != 0.0:
+            li_pdf_p = load_initiation_pdf(
+                    xvals, 
+                    m=abs(mu0_p), 
+                    s=sig0_p, 
+                    t=tau0_p
+                )
+            pdf_p += wLI_p * li_pdf_p 
+
+        if wE_p != 0.0:
+            e_pdf_p = elongation_pdf(
+                    xvals, 
+                    m0=abs(mu0_p), 
+                    s0=sig0_p, 
+                    t0=tau0_p, 
+                    m1=abs(mu1_p), 
+                    s1=sig1_p
+                )
+            pdf_p += wE_p * e_pdf_p
+
+        if wT_p != 0.0:
+            t_pdf_p = termination_pdf(xvals, m=abs(mu1_p), s=sig1_p)
+            pdf_p += wT_p * t_pdf_p
+        
+    else:
+        pdf_p = np.array([])
+
+    # Negative strand pdf
+    if w_n.all() != None:
+
+        pdf_n = np.zeros(len(xvals))
+
+        if wLI_n != 0.0:
+            li_pdf_n = load_initiation_pdf(
+                    xvals,
+                    m=abs(mu0_n), 
+                    s=abs(sig0_n), 
+                    t=abs(tau0_n)
+                )
+            pdf_n += wLI_n * li_pdf_n
+
+        if wE_n != 0.0:
+        # Elongation pdf inverts internally
+            e_pdf_n = elongation_pdf(
+                    xvals, 
+                    m0=abs(mu0_n), 
+                    s0=abs(sig0_n), 
+                    t0=abs(tau0_n), 
+                    m1=abs(mu1_n), 
+                    s1=abs(sig1_n)
+                )
+            pdf_n += wE_n * e_pdf_n
+
+        if wT_n != 0.0:
+            t_pdf_n = termination_pdf(
+                    xvals,
+                    m=abs(mu1_n), 
+                    s=abs(sig1_n)
+                )  
+            pdf_n += wT_n * t_pdf_n
+        
+    else:
+        pdf_n = np.array([])
+
+    return pdf_p, pdf_n
+
 def gene_model(
     xvals, 
     mu0_p=None, 
@@ -211,7 +397,7 @@ def gene_model(
     N_n=1000,
     seed=42, 
     rvs=False,
-    pdf=True,
+    pdf=True
 ):
     '''
     Parameters

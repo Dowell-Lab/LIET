@@ -100,6 +100,7 @@ def LIET_plot(
         data=True,
         sense=True,
         antisense=True,
+        ET=True,
         shifted = True,
         fig_size=(10, 7),
         xlim=None,
@@ -188,8 +189,12 @@ def LIET_plot(
             mL = results['mL'][stat]
             sL = results['sL'][stat]
             tI = results['tI'][stat]
-            mT = results['mT'][stat]
-            sT = results['sT'][stat]
+            if ET:
+                mT = results['mT'][stat]
+                sT = results['sT'][stat]
+            else:
+                mT = None
+                sT = None
             w = results['w'][stat]
             if len(w) == 3:
                 w.extend([0])
@@ -351,8 +356,28 @@ def LIET_plot(
             linewidth=0.5, 
             color='k'
         )
+        if ET:
+            ax.axvline(
+                x=mT, ymin=0, ymax=1, 
+                linestyle='--', 
+                linewidth=0.5, 
+                color='blue'
+            )
         annot = liet_class.data['annot']
         txt = f"{annot['chrom']}:{annot['start']}"
+        xlim = ax.get_xlim()
+        txt_pos = -1*xlim[0] / (xlim[1] - xlim[0]) + 0.003
+        ax.text(
+            txt_pos, 0.02, txt,
+            horizontalalignment='left', 
+            verticalalignment='bottom', 
+            transform=ax.transAxes
+        )
+        if ET:
+            txt = f"{annot['chrom']}:{annot['start']}-\nLIETend={round(mT)}"
+        else:
+            txt = f"{annot['chrom']}:{annot['start']}, tau={round(tI)}, sL={round(sL)}"
+
         xlim = ax.get_xlim()
         txt_pos = -1*xlim[0] / (xlim[1] - xlim[0]) + 0.003
         ax.text(
