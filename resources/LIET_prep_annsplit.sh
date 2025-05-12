@@ -16,6 +16,7 @@ ann_prefix=$6
 #. e.g. PAD=2000,2000
 # or e.g. PAD_FILE=/scrat/ch//////
 PAD=$7
+LIET_DIR=$8
 
 echo "one is srr_list" $srr_list
 echo "two is annfile" $annfile
@@ -24,6 +25,7 @@ echo "four is WD" $WD
 echo "five is input type" $input
 echo "six is ann_prefix" $ann_prefix
 echo "seven is pad" $PAD
+echo "eight is LIET direcotry" $LIET_DIR
 
 
 # :' This script takes a text file of SRRs, the annotation file used for running LIET, the input directory, and an \
@@ -32,7 +34,6 @@ echo "seven is pad" $PAD
 # It will get the 3 prime stranded bedgraphs for LIET and write the CONFIG and SBATCH Files in the given WD
 
 ### EDIT TOWARDS THE CORRECT LIET PATH
-LIET_DIR=/Users/hoto7260/LIET/LIET/liet/
 LIET_EXE=${LIET_DIR}/liet_exe_mp.py
 
 ## CONFIG, RESULTS, E_AND_O

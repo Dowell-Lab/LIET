@@ -3,9 +3,10 @@
 
 INPUT_DIR=/Users/hoto7260/LIET/LIET/liet/tests
 srr_list=${INPUT_DIR}/test_SRRs.txt
-annfile=${INPUT_DIR}/LIET_input_1102.txt
+annfile=${INPUT_DIR}/LIET_input_1210.txt
 BGS=${INPUT_DIR}/bedgraphs
 WD=LIET_tmp/
+LIET_DIR=/Users/hoto7260/LIET/LIET/liet
 
 
 ## BGS_done, BAMS
