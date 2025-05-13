@@ -294,6 +294,9 @@ Example workflow for plotting fits:
 
 ![plot-LIET.png](./README-figs/plot-LIET.png)
 
+### Testing LIET on Fiji or a Supercomputer
+You can test that installation was successful by going to resources/ and running bash 01_run_LIET_prep_annsplit.sh (make sure to edit the LIET_DIR to point to yours). This will produce the directory LIET_tmp in resources/. You can then run ```sbatch test1_EMG.sbatch```. It will take about 20 minutes and will produce the test1_EMG.liet, test1_EMG.liet.err, and test1_EMG.liet.log in resources/LIET_tmp/LIET/LIET_results/test1_EMG/. The other files (1_Testing...) are based on split up annotations and can be deleted (originally kept for optional debugging).
+
 ## Assessing Results
 
 The FitParse python class allows a user to load results from LIET into dictionaries or a dataframe with the following columns:

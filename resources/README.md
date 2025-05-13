@@ -1,7 +1,5 @@
 # Resources for running LIET
 
-
-
 ## From the Original LIET paper
 
 This directory contains the pad, annotation, and `#SBATCH` files used in the LIET paper [1]. Below are descriptions of what each file is and how it should be used: 
