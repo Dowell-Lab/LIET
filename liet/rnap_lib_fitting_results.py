@@ -557,7 +557,7 @@ def results_loader(gene_ids,
                    bedgraphs=None, 
                    config=None, 
                    result=None, 
-                   log=None):
+                   log=None, colon_format=False):
     '''
     This function uses much of the input data processing functionality to read 
     in LIET fitting results (from the .liet and .liet.log files) as well as 
@@ -572,6 +572,9 @@ def results_loader(gene_ids,
         # Only need the input files from config
         bgp_file = config_parse['FILES']['BEDGRAPH_POS']
         bgn_file = config_parse['FILES']['BEDGRAPH_NEG']
+        antisense = config_parse["MODEL"]['ANTISENSE']
+        ET_sense = config_parse["MODEL"]['ET_sense']
+        ET_antisense = config_parse["MODEL"]['ET_sense']
 
     elif bedgraphs:
         assert isinstance(bedgraphs, (tuple, list)), "bedgraphs not a tuple"
@@ -580,7 +583,8 @@ def results_loader(gene_ids,
     else:
         raise ValueError("You must specify either config or bedgraphs.")
     
-    fit_parse = FitParse(result, log_file=log)
+    fit_parse = FitParse(result, log_file=log, antisense=antisense, ET_sense=ET_sense, ET_antisense=ET_antisense, 
+    colon_format=colon_format)
 
     # Determine chromosome string order
     chr_order = dp.chrom_order_reader(bgp_file, bgn_file)
@@ -636,11 +640,18 @@ def results_loader(gene_ids,
         model_params = {p:v[0] for p, v in fit_parse.fits[gid].items()}
 
         # Round w_b and extend w_a
-        wb_update = np.around(1.0 - sum(model_params['w'][0:3]), decimals=2)
-        model_params['w'] = [*model_params['w'][0:3], wb_update]
+        if len(model_params['w']) == 2:
+            w = model_params['w']
+            model_params['w'] = [w[0], 0, 0, w[1]]
+        else:
+            wb_update = np.around(1.0 - sum(model_params['w'][0:3]), decimals=2)
+            model_params['w'] = [*model_params['w'][0:3], wb_update]
         if len(model_params['w_a']) == 2:
             w_a = model_params['w_a']
             model_params['w_a'] = [w_a[0], 0, 0, w_a[1]]
+        else:
+            wa_update = np.around(1.0 - sum(model_params['w_a'][0:3]), decimals=2)
+            model_params['w_a'] = [*model_params['w_a'][0:3], wb_update]
 
         results[gid] = (xvals, preads, nreads, strand, model_params)
 

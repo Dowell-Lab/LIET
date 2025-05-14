@@ -423,6 +423,7 @@ def LIET_ax(
     xvals = None,
     data = None,
     nbins = 'auto',
+    Percentiles = None
 ):
 
     '''

@@ -1,4 +1,5 @@
 import sys
+import pandas as pd
 from collections import OrderedDict
 
 class FitParse:
@@ -9,7 +10,7 @@ class FitParse:
     results dictionary and produces a dataframe accessible by results.df <fits>.
     '''
 
-    def __init__(self, res_file, log_file=None, antisense=True, ET_sense=True, ET_antisense=False, colon_format=False):
+    def __init__(self, res_file, log_file=None, antisense=True, ET_sense=True, ET_antisense=False, colon_format=False, debug=False):
 
         self.definitions = OrderedDict({
             "mL": "Sense strand loading position (mu)",
@@ -55,7 +56,8 @@ class FitParse:
                         print(line_list, file=sys.stderr)
                         continue
                     else:
-                        print(f"CHECK LINE: {line_list}", file=sys.stderr)
+                        if debug:
+                            print(f"CHECK LINE: {line_list}", file=sys.stderr)
                         continue
                 
                 # Parse and cast line
@@ -159,9 +161,10 @@ class FitParse:
                         self.log[gene_id] = dict()
                     else:
                         field, value = line.strip().split(':')
-                        if field == 'strand_cov':
-                            if gene_id == "chr1:234980692-234981480-tfit,dreg":
-                                print("strand_cov", value)
+                        if field == 'fit_range':
+                            value = value.strip('()').split(',')
+                            value = tuple(map(int, value))
+                        elif field == 'strand_cov':
                             value = value.strip('()').split(',')
                             value = tuple(map(int, value))
                         elif field == 'elbo_range':
@@ -172,6 +175,8 @@ class FitParse:
                         else:
                             continue
                         self.log[gene_id].update({field: value})
+
+
             
 #             self.cov_pos = []
 #             self.cov_neg = []
