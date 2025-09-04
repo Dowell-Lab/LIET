@@ -295,7 +295,7 @@ Example workflow for plotting fits:
 ![plot-LIET.png](./README-figs/plot-LIET.png)
 
 ### Testing LIET on Fiji or a Supercomputer
-You can test that installation was successful by going to resources/ and running bash 01_run_LIET_prep_annsplit.sh (make sure to edit the LIET_DIR to point to yours). This will produce the directory LIET_tmp in resources/. You can then run ```sbatch test1_EMG.sbatch```. It will take about 20 minutes and will produce the test1_EMG.liet, test1_EMG.liet.err, and test1_EMG.liet.log in resources/LIET_tmp/LIET/LIET_results/test1_EMG/. The other files (1_Testing...) are based on split up annotations and can be deleted (originally kept for optional debugging).
+You can test that installation was successful by going to resources/ and running bash 01_run_LIET_prep_annsplit.sh (make sure to edit the LIET_DIR to point to yours and that you have R available). This will produce the directory LIET_tmp in resources/. You can then run ```sbatch test1_EMG.sbatch```. It will take about 20 minutes and will produce the test1_EMG.liet, test1_EMG.liet.err, and test1_EMG.liet.log in resources/LIET_tmp/LIET/LIET_results/test1_EMG/. The other files (1_Testing...) are based on split up annotations and can be deleted (originally kept for optional debugging).
 
 ## Assessing Results
 
@@ -386,12 +386,16 @@ chr1	16207125	16207325	1	chr1:16207125	mL=-40.62:5.34,sL=236.55:4.68,tI=23.18:3.
 
 ```
 
-**Code optimizing for running LIET on a large set of genes/enhancers and getting the percentile based lengths can be found in resources/**
+**Code optimized for running LIET on a large set of genes/enhancers and getting the percentile based lengths can be found in `resources/`** with instructions in the folder's README.
 
 
 
 ## Citing LIET
-[*LIET Model: Capturing the kinetics of RNA polymerase from loading to termination.* J.T. Stanley, G.E.F. Barone, H.A. Townsend, R.F. Sigauke, M.A. Allen, R.D. Dowell. *bioRxiv* (2024)](https://www.biorxiv.org/content/10.1101/2024.10.03.616401v2) 
+Please cite both 
+[*LIET Model: Capturing the kinetics of RNA polymerase from loading to termination.* J.T. Stanley, G.E.F. Barone, H.A. Townsend, R.F. Sigauke, M.A. Allen, R.D. Dowell. *Nucleic Acids Research* (2025)](https://doi.org/10.1093/nar/gkaf246) 
+
+
+
 
 ## Contact information
 Contact jacob.stanley@colorado.edu or georgia.barone@colorado.edu for more information. If running LIET on enhancers contact hope.townsend@colorado.edu.

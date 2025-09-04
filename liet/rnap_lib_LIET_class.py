@@ -1,6 +1,6 @@
 #==============================================================================                                                                                                       
 __author__ = ['Jacob T. Stanley', 'Hope A. Townsend']
-__credits__ = ['Jacob T. Stanley', 'Robin D. Dowell']
+__credits__ = ['Jacob T. Stanley', 'Hope A. Townsend', 'Robin D. Dowell']
 __maintainer__ = 'Jacob T. Stanley'
 __email__ = 'jacob.stanley@colorado.edu'                                                                                                       
 #==============================================================================
@@ -438,7 +438,8 @@ class LIET:
 
         # Get the reads
         # Strand data dict used to reference self.data for 'observed' kwargs
-        strand_ref = {1: 'pos_reads', -1: 'neg_reads'}
+        # this code is originally lines 525-528 in main
+        strand_ref = {1: 'pos_reads', -1: 'neg_reads'} 
         sense_reads = strand_ref[self.data['annot']['strand']]
         antisense_reads = strand_ref[-1*self.data['annot']['strand']]
         
@@ -614,7 +615,7 @@ class LIET:
                         mu=self._p['mL'],
                         sigma=self._p['sL'],
                         nu=self._p['tI'],
-                        observed=self.data[antisense_reads]
+                        observed=self.data[sense_reads]
                     )
 
 
@@ -717,9 +718,11 @@ class LIET:
 
                     #print(f"anti min,max: {anti_xmin}, {anti_xmax}")
 
-                    back_a_pdf = pm.Uniform.dist(lower=anti_xmin, upper=anti_xmax)
+                    
 
                     with self.model:
+                        back_a_pdf = pm.Uniform.dist(lower=anti_xmin, upper=anti_xmax)
+                        
                         LI_a_pdf = pm.ExGaussian.dist(
                             mu=m_a, 
                             sigma=s_a, 

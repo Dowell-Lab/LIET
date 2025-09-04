@@ -92,7 +92,7 @@ class FitParse:
                 
                 self.fits[gid] = temp
 
-        # Extract and assign all the variable arrays
+        # Extract and assign variable arrays
         self.mL, self.mL_std = self.param_extract('mL', stdev=True)
         self.sL, self.sL_std = self.param_extract('sL', stdev=True)
         self.tI, self.tI_std = self.param_extract('tI', stdev=True)
@@ -109,6 +109,7 @@ class FitParse:
             self.mT = relative_mT
 
             self.sT, self.sT_std = self.param_extract('sT', stdev=True)
+        
         self.w, self.w_std = self.param_extract('w', stdev=True)
         
         if antisense is True:
@@ -146,6 +147,7 @@ class FitParse:
         
         
         # Parse strand coverage and min/max elbo values from log file
+        # colon format clarified if enhancer so chr:X in name
         if log_file:
             self.log = OrderedDict()
             with open(log_file, 'r') as lf:
@@ -178,13 +180,13 @@ class FitParse:
 
 
             
-#             self.cov_pos = []
-#             self.cov_neg = []
+            self.cov_pos = []
+            self.cov_neg = []
             print("Number of features considered:", len(self.genes))
-#             for g in self.genes:
-#                 #if (self.log[g]['strand_cov']):
-#                     self.cov_pos.append(self.log[g]['strand_cov'][0])
-#                     self.cov_neg.append(abs(self.log[g]['strand_cov'][1]))
+             for g in self.genes:
+                 if (self.log[g]['strand_cov']):
+                     self.cov_pos.append(self.log[g]['strand_cov'][0])
+                     self.cov_neg.append(abs(self.log[g]['strand_cov'][1]))
 
         # Get all info in a dataframe
         self.df = self.dataframe_creator()

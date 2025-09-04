@@ -10,4 +10,6 @@ Maintainer
 Contributors
 ------------
 
-None yet. Why not be the first? See: CONTRIBUTING.rst
+* Hope A. Townsend <hope.townsend@colorado.edu>
+
+Want to contribute? See: CONTRIBUTING.rst
