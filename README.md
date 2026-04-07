@@ -6,8 +6,8 @@
 2. [Installation](#installation) - How to install LIET
 3. [Usage](#usage) - How to run LIET
 4. [Example output](#example-output) - Example output of a LIET run
-5. [Assessing Results](#Assessing-results) - Using FitParse
-6. [Applying to Enhancers](#Applying-to-Enhancers) - Using LIET on Enhancers
+5. [Assessing Results](#assessing-results) - Using FitParse
+6. [Applying to Enhancers](#applying-to-enhancers) - Using LIET on Enhancers
 7. [Contact information](#contact-information) - Who to contact about LIET
 
 <!--![LIET_logo.jpg](./README-figs/LIET_logo.jpg) -->
@@ -64,6 +64,8 @@ conda activate your_env_name
 5. Once PyMC is installed, clone the LIET GitHub repository. 
 
 ## Usage 
+### Testing LIET on Fiji or a Supercomputer
+You can test that installation was successful by going to resources/ and running bash 01_run_LIET_prep_annsplit.sh (make sure to edit the LIET_DIR to point to yours and that you have R available). This will produce the directory LIET_tmp in resources/. You can then run ```sbatch test1_EMG.sbatch```. It will take about 20 minutes and will produce the test1_EMG.liet, test1_EMG.liet.err, and test1_EMG.liet.log in resources/LIET_tmp/LIET/LIET_results/test1_EMG/. The other files (1_Testing...) are based on split up annotations and can be deleted (originally kept for optional debugging).
 
 ### Running LIET
 
@@ -294,9 +296,6 @@ Example workflow for plotting fits:
 
 ![plot-LIET.png](./README-figs/plot-LIET.png)
 
-### Testing LIET on Fiji or a Supercomputer
-You can test that installation was successful by going to resources/ and running bash 01_run_LIET_prep_annsplit.sh (make sure to edit the LIET_DIR to point to yours and that you have R available). This will produce the directory LIET_tmp in resources/. You can then run ```sbatch test1_EMG.sbatch```. It will take about 20 minutes and will produce the test1_EMG.liet, test1_EMG.liet.err, and test1_EMG.liet.log in resources/LIET_tmp/LIET/LIET_results/test1_EMG/. The other files (1_Testing...) are based on split up annotations and can be deleted (originally kept for optional debugging).
-
 ## Assessing Results
 
 The FitParse python class allows a user to load results from LIET into dictionaries or a dataframe with the following columns:
@@ -392,7 +391,10 @@ chr1	16207125	16207325	1	chr1:16207125	mL=-40.62:5.34,sL=236.55:4.68,tI=23.18:3.
 
 ## Citing LIET
 Please cite both 
+
 [*LIET Model: Capturing the kinetics of RNA polymerase from loading to termination.* J.T. Stanley, G.E.F. Barone, H.A. Townsend, R.F. Sigauke, M.A. Allen, R.D. Dowell. *Nucleic Acids Research* (2025)](https://doi.org/10.1093/nar/gkaf246) 
+
+[*Improving confidence of differential transcription calls in enhancers.* H.A. Townsend, J.T. Stanley, M.A. Allen, R.D. Dowell. *BioRxiV* (2025)](https://doi.org/10.1101/2025.09.12.675852) 
 
 
 
