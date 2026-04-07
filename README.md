@@ -6,7 +6,9 @@
 2. [Installation](#installation) - How to install LIET
 3. [Usage](#usage) - How to run LIET
 4. [Example output](#example-output) - Example output of a LIET run
-5. [Contact information](#contact-information) - Who to contact about LIET
+5. [Assessing Results](#assessing-results) - Using FitParse
+6. [Applying to Enhancers](#applying-to-enhancers) - Using LIET on Enhancers
+7. [Contact information](#contact-information) - Who to contact about LIET
 
 <!--![LIET_logo.jpg](./README-figs/LIET_logo.jpg) -->
 <img src="./README-figs/LIET_logo.jpg" alt="LIET logo" width="250" />
@@ -62,6 +64,8 @@ conda activate your_env_name
 5. Once PyMC is installed, clone the LIET GitHub repository. 
 
 ## Usage 
+### Testing LIET on Fiji or a Supercomputer
+You can test that installation was successful by going to resources/ and running bash 01_run_LIET_prep_annsplit.sh (make sure to edit the LIET_DIR to point to yours and that you have R available). This will produce the directory LIET_tmp in resources/. You can then run ```sbatch test1_EMG.sbatch```. It will take about 20 minutes and will produce the test1_EMG.liet, test1_EMG.liet.err, and test1_EMG.liet.log in resources/LIET_tmp/LIET/LIET_results/test1_EMG/. The other files (1_Testing...) are based on split up annotations and can be deleted (originally kept for optional debugging).
 
 ### Running LIET
 
@@ -89,6 +93,8 @@ PAD_FILE=/path-to-your-pad-file/
 ANTISENSE=True
 BACKGROUND=True
 FRACPRIORS=False
+ET_sense=True
+ET_antisense=False
 
 # Example [PRIORS] below. 
 # These priors are a good starting place for running LIET.
@@ -105,6 +111,8 @@ w=dist:dirichlet,alpha_LI:1,alpha_E:1,alpha_T:1,alpha_B:1
 mL_a=dist:normal,mu:0,sigma:1500
 sL_a=dist:exponential,offset:1,tau:500
 tI_a=dist:exponential,offset:1,tau:500
+mT_a=dist:exponential,offset:1,tau:10000
+sT_a=dist:exponential,offset:10,tau:500
 
 [DATA_PROC]
 RANGE_SHIFT=True
@@ -126,6 +134,7 @@ MEDIAN=False
 STDEV=True
 SKEW=False
 PDF=False
+Percentiles=False
 ```
 ### Annotation file
 The `ANNOTATION` file (specified in the config file) is a tab separated/headerless file that contans the set of genes you want to run LIET on. The format for the annotation file is `chromosome start stop gene length-of-gene strand`
@@ -287,11 +296,111 @@ Example workflow for plotting fits:
 
 ![plot-LIET.png](./README-figs/plot-LIET.png)
 
+## Assessing Results
+
+The FitParse python class allows a user to load results from LIET into dictionaries or a dataframe with the following columns:
+1. Original annotation file inputs: 'chrom', 'start', 'stop', 'strand', 'gene',
+2. Final mean and standard deviations of the posterior position/sigma values (in bp and if position relative to start):
+    *  Sense (Positive if ENhancer): 'mL_mean', 'mL_stdev', 'sL_mean', 'sL_stdev', 'tI_mean', 'tI_stdev'
+    *  Antisense (Negative if Enhancer): 'mL_a_mean', 'mL_a_stdev', 'sL_a_mean', 'sL_a_stdev', 'tI_a_mean', 'tI_a_stdev'
+3. Final mean standard deviations of the weights of each part of the model (LI and B for ET=False and LI, E, T, and B for ET=True)
+    * Sense (Positive if enhancer): 'w_LI_mean', 'w_LI_stdev', 'w_B_mean', 'w_B_stdev'
+    * Antisense (Negative if enhancer): 'w_aLI_mean', 'w_aLI_stdev', 'w_aB_mean', 'w_aB_stdev'
+4. Percentile Positions (in bp relative to start, if _neg then to left of start)
+    * _pos = sense/positive strand, _neg = antisense/negative strand
+    * '0.75_perc_pos', '0.75_perc_neg','0.8_perc_pos', '0.8_perc_neg', '0.85_perc_pos', '0.85_perc_neg',
+       '0.9_perc_pos', '0.9_perc_neg', '0.95_perc_pos', '0.95_perc_neg'
+5. Coverage: Number of reads in the full padded region on positive and negative strand
+    * 'pos_cov', 'neg_cov',
+6. Elbow Loss Range (Lower and Upper)
+    * 'elbo_lrange', 'elbo_urange', 
+8. Time used to fit the model
+    * 'fit_time_min'
+
+FitParse takes the following arguments:
+* res_file: str, LIET results file (.liet)
+* log_file: str, LIET log file (.liet.log)
+* antisense: Boolean, whether antisense strand considered
+* ET_sense and ET_antisense: Booleans, whether elongation and termination considered in model of sense or antisense strand
+* colon_format: Boolean, True if the names of regions used includes colon (e.g. naming an enhancer according to its midpoint like chr1:1034)
+
+Classic usage with genes:
+```
+results = FitParse(res_file=res_file, log_file=log_file, 
+                    antisense=True, 
+                    ET_sense=True, ET_antisense=False, 
+                    colon_format=False)
+# check out part of results
+results.df.iloc[0:2,]
+```
+
+More extensive usage of this class can be found in /resources/03_Get_LIET_results_bed.ipynb
+
+## Applying to Enhancers
+
+If wanting to find the termination position of enhancers, we recommend you use a slightly different LIET approach as optimized in XX. 
+
+Enhancers do not have the same termination machinery as genes and therefore tend to be better modeled without the elongation and termination portions of the LIET model which otherwise undercall the position. Instead the 95th percentile of the LI model best captures length of the transcripts usually.
+
+**The following parameters should be changed from genes:**
+```
+[MODEL]
+ANTISENSE=True
+ET_sense=False
+ET_antisense=False
+
+# Example [PRIORS] below. 
+# These priors are a good starting place for running LIET on enhancers.
+# Reccomendation: play with changing prior values & look at associated LIET fits.
+# This will help you determine which values are the best for your genes/data. 
+[PRIORS]
+mL=dist:normal,mu:0,sigma:500
+sL=dist:exponential,tau:50,offset:15
+tI=dist:exponential,tau:30,offset:20
+mT=dist:exponential,tau:450,offset:100
+sT=dist:exponential,tau:40,offset:0
+w=dist:dirichlet,alpha_LI:1,alpha_E:1,alpha_T:1,alpha_B:1
+mL_a=dist:normal,mu:0,sigma:500
+sL_a=dist:exponential,tau:50,offset:15
+tI_a=dist:exponential,tau:30,offset:20
+mT_a=dist:exponential,tau:450,offset:100
+sT_a=dist:exponential,tau:40,offset:0
+
+[DATA_PROC]
+PAD=3000,3000
+
+[RESULTS]
+PERCENTILES=True
+```
+
+**The following output will therefore change for .liet files**:
+* If using PERCENTILES=TRUE then the 75th, 80th, 85th, 90th, and 95th percentiles will be calculated and displayed as Percentiles=[Percentile:Sense_Value:Antisense_Value;Percentile2:Sense_Value:Antisense_Value...]
+```
+# < date & time >
+# CONFIG	< config file >
+# Output format: param_name=value:stdev
+#===============================================================================
+chr1	631361	631561	1	chr1:631361	mL=-1.52:87.38,sL=67.54:70.87,tI=50.43:41.25,w=[0. 1.]:[0. 0.],mL_a=-6.05:58.24,sL_a=65.9:66.41,tI_a=50.11:41.34,w_a=[0. 1.]:[0. 0.],Percentiles=0.75:103:106;0.8:118:121;0.85:135:138;0.9:159:161;0.95:196:198
+chr1	16207125	16207325	1	chr1:16207125	mL=-40.62:5.34,sL=236.55:4.68,tI=23.18:3.87,w=[0.92 0.08]:[0.01 0.01],mL_a=66.26:13.06,sL_a=54.43:15.69,tI_a=207.5:21.18,w_a=[0.94 0.06]:[0.03 0.03],Percentiles=0.75:224:361;0.8:263:407;0.85:310:467;0.9:368:551;0.95:454:695
+
+```
+
+**Code optimized for running LIET on a large set of genes/enhancers and getting the percentile based lengths can be found in `resources/`** with instructions in the folder's README.
+
+
+
 ## Citing LIET
-[*LIET Model: Capturing the kinetics of RNA polymerase from loading to termination.* J.T. Stanley, G.E.F. Barone, H.A. Townsend, R.F. Sigauke, M.A. Allen, R.D. Dowell. *bioRxiv* (2024)](https://www.biorxiv.org/content/10.1101/2024.10.03.616401v2) 
+Please cite both 
+
+[*LIET Model: Capturing the kinetics of RNA polymerase from loading to termination.* J.T. Stanley, G.E.F. Barone, H.A. Townsend, R.F. Sigauke, M.A. Allen, R.D. Dowell. *Nucleic Acids Research* (2025)](https://doi.org/10.1093/nar/gkaf246) 
+
+[*Improving confidence of differential transcription calls in enhancers.* H.A. Townsend, J.T. Stanley, M.A. Allen, R.D. Dowell. *BioRxiV* (2025)](https://doi.org/10.1101/2025.09.12.675852) 
+
+
+
 
 ## Contact information
-Contact jacob.stanley@colorado.edu or georgia.barone@colorado.edu for more information. 
+Contact jacob.stanley@colorado.edu or georgia.barone@colorado.edu for more information. If running LIET on enhancers contact hope.townsend@colorado.edu.
 
 
 

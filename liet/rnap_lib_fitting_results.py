@@ -1,8 +1,8 @@
 import numpy as np
 import scipy as sp
-import pymc as pm
 import time
 from collections import OrderedDict
+import pymc as pm
 
 import rnap_lib_data_proc as dp
 from rnap_lib_data_sim import invert, gene_model
@@ -243,7 +243,7 @@ def posterior_stats(
         return mode
 
 # Compute the stats for parameters in params
-    post_stats = {}
+    post_stats = {"percentile_dict":dict()}
     for p in params:
 
         samps = posterior_samples[p][0,:]
@@ -346,7 +346,7 @@ def log_file_init(log_file, config_file_path):
     log_file.write("#" + "="*79 + "\n")
 
 
-def results_format(annot, post_stats, stat='mean', decimals=2):
+def results_format(annot, post_stats, stat='mean', decimals=2, ET_sense=True, antisense=True, ET_antisense=False, percentile_dict=None):
     '''
     Parameters
     ----------
@@ -362,6 +362,10 @@ def results_format(annot, post_stats, stat='mean', decimals=2):
         Statistical value to include for each of the parameters. Must be one 
         of the following: 'mean', 'median', or 'mode'. Default: 'mean'
 
+    percentile_dict : None or dict
+        If provided, these will be saved as the percentiles as the following string (let's say we have 75th & 80th percentiles 
+        "Percentiles= 0.75-pos_gene_perc-neg_gene_perc;0.85-pos_gene_perc-neg_gene_perc
+
     Returns
     -------
     res : str
@@ -375,15 +379,35 @@ def results_format(annot, post_stats, stat='mean', decimals=2):
     id = str(annot['gene_id'])
     fields = list([chrom, start, stop, strand, id])
 
-    # Hard coding output order of parameters
-    params = ['mL', 'sL', 'tI', 'mT', 'sT', 'w', 'mL_a', 'sL_a', 'tI_a', 'w_a']
+    # Hard coding output order of parameters based on if including ET
+    if ET_sense is True:
+        # full model on sense strand
+        if antisense is True:
+            # full model vs EMG on antisense strand
+            if ET_antisense is True:
+                params = ['mL', 'sL', 'tI', 'mT', 'sT', 'w', 'mL_a', 'sL_a', 'tI_a', 'mT_a', 'sT_a', 'w_a']
+            else:
+                params = ['mL', 'sL', 'tI', 'mT', 'sT', 'w', 'mL_a', 'sL_a', 'tI_a', 'w_a']
+        else:
+            params = ['mL', 'sL', 'tI', 'mT', 'sT', 'w']
+    else:
+        # then EMG model on sense strand
+        if antisense is True:
+            # full model vs EMG on antisense strand
+            if ET_antisense is True:
+                params = ['mL', 'sL', 'tI', 'w', 'mL_a', 'sL_a', 'tI_a', 'mT_a', 'sT_a', 'w_a']
+            else:
+                params = ['mL', 'sL', 'tI', 'w', 'mL_a', 'sL_a', 'tI_a', 'w_a']
+        else:
+            params = ['mL', 'sL', 'tI', 'w']
+    
     fit_res = []
     for p in params:
 
         # Extract param val depending on joint/indep priors for antisense
         if p in post_stats.keys():
             pvals = post_stats[p]
-        elif p in ['mL_a', 'sL_a', 'tI_a']:
+        elif p in ['mL_a', 'sL_a', 'tI_a', 'w_a', 'mT_a', 'sT_a']:
             p_alt = p.split('_')[0]
             pvals = post_stats[p_alt]
         else:
@@ -394,15 +418,34 @@ def results_format(annot, post_stats, stat='mean', decimals=2):
 
         # Enforce that weights sum to 1.00 (by adjusting the background wB)
         # Rounding sometimes results in sum being off by 1e-<decimals>
-        if p == "w":
-            wb_update = np.around(1.0 - sum(pval[0:3]), decimals=decimals)
-            assert(abs(wb_update - pval[3]) <= 10**-decimals,
-                "WARNING: Weight issue! wB rounding is not within tolerance."
-            )
-            pval[3] = wb_update
+        if p == "w" and ET_sense is True:
+                wb_update = np.around(1.0 - sum(pval[0:3]), decimals=decimals)
+                assert(abs(wb_update - pval[3]) <= 10**-decimals,
+                    "WARNING: Weight issue! wB rounding is not within tolerance."
+                )
+                pval[3] = wb_update
+        if p == "w_a" and ET_antisense is True:
+                wb_update = np.around(1.0 - sum(pval[0:3]), decimals=decimals)
+                assert(abs(wb_update - pval[3]) <= 10**-decimals,
+                    "WARNING: Weight issue! wB rounding is not within tolerance."
+                )
+                pval[3] = wb_update 
 
         pstring = f"{p}={pval}:{pstd}"
         fit_res.append(pstring)
+
+    # If there is a percentile dictionary get the results for percentiles
+    if percentile_dict:
+        percentile_str = "Percentiles="
+        # get the list
+        count = 0
+        for percentile, result in percentile_dict.items():
+            if count == 0:
+                percentile_str = f'{percentile_str}{percentile}:{result[0]}:{result[1]}'
+            else:
+                percentile_str = f'{percentile_str};{percentile}:{result[0]}:{result[1]}'
+            count = count + 1
+        fit_res.append(percentile_str)
 
     fit_res = ",".join(fit_res)
     fields.append(fit_res)
@@ -514,7 +557,7 @@ def results_loader(gene_ids,
                    bedgraphs=None, 
                    config=None, 
                    result=None, 
-                   log=None):
+                   log=None, colon_format=False):
     '''
     This function uses much of the input data processing functionality to read 
     in LIET fitting results (from the .liet and .liet.log files) as well as 
@@ -529,6 +572,9 @@ def results_loader(gene_ids,
         # Only need the input files from config
         bgp_file = config_parse['FILES']['BEDGRAPH_POS']
         bgn_file = config_parse['FILES']['BEDGRAPH_NEG']
+        antisense = config_parse["MODEL"]['ANTISENSE']
+        ET_sense = config_parse["MODEL"]['ET_sense']
+        ET_antisense = config_parse["MODEL"]['ET_sense']
 
     elif bedgraphs:
         assert isinstance(bedgraphs, (tuple, list)), "bedgraphs not a tuple"
@@ -537,7 +583,8 @@ def results_loader(gene_ids,
     else:
         raise ValueError("You must specify either config or bedgraphs.")
     
-    fit_parse = FitParse(result, log_file=log)
+    fit_parse = FitParse(result, log_file=log, antisense=antisense, ET_sense=ET_sense, ET_antisense=ET_antisense, 
+    colon_format=colon_format)
 
     # Determine chromosome string order
     chr_order = dp.chrom_order_reader(bgp_file, bgn_file)
@@ -593,11 +640,18 @@ def results_loader(gene_ids,
         model_params = {p:v[0] for p, v in fit_parse.fits[gid].items()}
 
         # Round w_b and extend w_a
-        wb_update = np.around(1.0 - sum(model_params['w'][0:3]), decimals=2)
-        model_params['w'] = [*model_params['w'][0:3], wb_update]
+        if len(model_params['w']) == 2:
+            w = model_params['w']
+            model_params['w'] = [w[0], 0, 0, w[1]]
+        else:
+            wb_update = np.around(1.0 - sum(model_params['w'][0:3]), decimals=2)
+            model_params['w'] = [*model_params['w'][0:3], wb_update]
         if len(model_params['w_a']) == 2:
             w_a = model_params['w_a']
             model_params['w_a'] = [w_a[0], 0, 0, w_a[1]]
+        else:
+            wa_update = np.around(1.0 - sum(model_params['w_a'][0:3]), decimals=2)
+            model_params['w_a'] = [*model_params['w_a'][0:3], wb_update]
 
         results[gid] = (xvals, preads, nreads, strand, model_params)
 

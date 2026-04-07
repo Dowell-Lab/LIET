@@ -166,7 +166,9 @@ def fit_routine(fit_instance, config, pad_dict):
         # Build model
         liet.build_model(
             antisense=config['MODEL']['ANTISENSE'],
-            background=config['MODEL']['BACKGROUND']
+            background=config['MODEL']['BACKGROUND'], 
+            ET_sense=config['MODEL']['ET_sense'], 
+            ET_antisense=config['MODEL']['ET_antisense']
         )
     except:
         return_dict['res'] = f"{annot_dict['gene_id']}: model error\n"
@@ -206,12 +208,33 @@ def fit_routine(fit_instance, config, pad_dict):
         return_dict['err'].append(f"{traceback.format_exc()}\n")
         return {annot: return_dict}
 
+    # if they request percentiles, get the percentiles of the full model
+    if config['RESULTS']['PERCENTILES']:
+        try :
+            # Add posterior stats to liet object before plotting.
+            liet.results = post_stats
+        #print(liet.results)
+            # get the 75,80,85,90,95 percentiles and the PDFs
+            pdf_p, pdf_n = liet.percentile_generator(percentiles=[0.75,0.8,0.85,0.9,0.95], 
+                                                 ET_sense=config['MODEL']['ET_sense'], 
+                                                 antisense=config['MODEL']['ANTISENSE'], 
+                                                 ET_antisense=config['MODEL']['ET_antisense'], 
+                                                 stat="mean")
+        except:
+            return_dict['res'] = f"{annot_dict['gene_id']}: res str error\n"
+            return_dict['err'].append(f"{traceback.format_exc()}\n")
+            return {annot: return_dict}
+
     try:
         # Record results of fitting
         res_string = fr.results_format(
             liet.data['annot'], 
             post_stats, 
-            stat='mean'
+            stat='mean', 
+            ET_sense=config['MODEL']['ET_sense'], 
+            antisense=config['MODEL']['ANTISENSE'], 
+            ET_antisense=config['MODEL']['ET_antisense'], 
+            percentile_dict=liet.results["percentile_dict"]
         )
         return_dict['res'] = res_string
     except:
@@ -237,21 +260,46 @@ def fit_routine(fit_instance, config, pad_dict):
 
     # Plot fit result
     if config['RESULTS']['PDF']:
-        try:
-            # Add posterior stats to liet object before plotting.
-            liet.results = post_stats
-            lplot = pl.LIET_plot(
-                liet, 
-                data=True,
-                antisense=True,
-                sense=True,
-                save=config['RESULTS']['PDF']
-                #save=f"liet_plot_{gene_id}.pdf"
-            )
-            plt.close(lplot)
-        except:
-            print(f"Can't plot fit result for {gene_id}")
-            return_dict['err'].append(f"{traceback.format_exc()}\n")
+        # get the name for the plot
+        plot_name = config['FILES']['RESULTS'].split("/")[-1]
+        # if already got the pdfs, plot with that
+        if config['RESULTS']['PERCENTILES']:
+            try:
+                lplot = pl.LIET_plot_pdf(
+                    liet, 
+                    pdf_p, pdf_n,
+                    data=True,
+                    ET_sense=config['MODEL']['ET_sense'],
+                    sense=True,
+                    antisense=config['MODEL']['ANTISENSE'],
+                    ET_antisense=config['MODEL']['ET_antisense'],
+                    frac_prob=True, 
+                    fig_size=(10,6), 
+                    xlim=[-1*pad[0]-500, pad[1]+500],
+                    save=str(f"{plot_name}_liet_plot_{gene_id}.pdf")
+                )
+                plt.close(lplot)
+            except:
+                print(f"Can't plot percentile fit result for {gene_id}")
+                return_dict['err'].append(f"{traceback.format_exc()}\n")
+        else:
+            try:
+                # Add posterior stats to liet object before plotting.
+                liet.results = post_stats
+                lplot = pl.LIET_plot(
+                    liet, 
+                    data=True,
+                    antisense=config['MODEL']['ANTISENSE'],
+                    ET=config['MODEL']['ET_sense'],
+                    sense=True,
+                    #save=config['RESULTS']['PDF']
+                    save=str(f"{plot_name}_liet_plot_{gene_id}.pdf"), 
+                    dpi=300
+                )
+                plt.close(lplot)
+            except:
+                print(f"Can't plot fit result for {gene_id}")
+                return_dict['err'].append(f"{traceback.format_exc()}\n")
     else:
         pass
     
@@ -351,6 +399,15 @@ def main():
                 err_file.write(filter_log[annot[2]])
         except:
             print(f"Can't write err: {annot}")
+
+    # now add the filtering logs
+    print(f"Number lost due to filtering counts: {len(filter_log.keys())}")
+    for annot, filter_log_entry in filter_log.items():
+        try:
+            log_file.write("".join([">",annot]))
+            log_file.write(filter_log_entry)
+        except:
+            print(f"Can't write coverage log: {annot}")
 
     res_file.close()
     log_file.close()

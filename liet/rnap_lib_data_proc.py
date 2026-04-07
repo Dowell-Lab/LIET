@@ -68,7 +68,7 @@ def pad_dict_generator(gene_id_list, default_pad, pad_file):
         Format: {'gene ID': (pad5, pad3), ...}
     '''
     if pad_file in ['', 'None', None]:
-        print('WARNING: A padding file was not provided.')
+        print(f"WARNING: A padding file was not provided. Using default pad {default_pad}")
         gene_pads = {gid: default_pad for gid in gene_id_list}
         print(f"PAD FILE: {pad_file}")
     else:
@@ -258,18 +258,18 @@ def config_loader(config_file):
         else:
             raise ValueError(f"Input {val} is not a boolean value.")
 
-    prior_names = ['mL', 'sL', 'tI', 'mT', 'sT', 'w', 'mL_a', 'sL_a', 'tI_a']
+    prior_names = ['mL', 'sL', 'tI', 'mT', 'sT', 'w', 'mL_a', 'sL_a', 'tI_a', 'mT_a', 'sT_a']
 
     config = {
         'FILES': {'ANNOTATION':'', 'BEDGRAPH':'', 'RESULTS':'', 'PAD_FILE':''},
-        'MODEL': {'ANTISENSE':None, 'BACKGROUND':None, 'FRACPRIORS':None}, 
+        'MODEL': {'ANTISENSE':None, 'BACKGROUND':None, 'FRACPRIORS':None, 'ET_sense':None, 'ET_antisense':None}, 
         'PRIORS': {'mL':None, 'sL':None, 'tI':None, 'mT':None, 'sT':None,
-            'mL_a':None, 'sL_a':None, 'tI_a':None, 'w':None}, 
+            'mL_a':None, 'sL_a':None, 'tI_a':None, 'mT_a':None, 'sT_a':None, 'w':None}, 
         'DATA_PROC': {'RANGE_SHIFT':None, 'PAD':None, 'COV_THRESHOLDS':None}, 
         'FIT': {'ITERATIONS':None, 'LEARNING_RATE':None, 'METHOD':None,
             'OPTIMIZER':None, 'MEANFIELD':None, 'TOLERANCE':None}, 
         'RESULTS': {'SAMPLES':None, 'MEAN':None, 'MODE':None, 'MEDIAN': None, 
-            'STDEV':None, 'SKEW':None, 'PDF': False}
+            'STDEV':None, 'SKEW':None, 'PERCENTILES':False, 'PDF': False}
     }
 
     with open(config_file, 'r') as f:
@@ -309,10 +309,12 @@ def config_loader(config_file):
                 pname == 'RESULTS' or
                 pname == 'PAD_FILE'):
                 config[category][pname] = pval
-            # MODEL
+            # MODEL   -- added ET which should also be boolean
             elif (pname == 'ANTISENSE' or 
                 pname == 'BACKGROUND' or
-                pname == 'FRACPRIORS'):
+                pname == 'FRACPRIORS' or 
+                 pname == 'ET_sense' or 
+                 pname == 'ET_antisense'):
                 config[category][pname] = bool_cast(pval)
             # DATA_PROC
             elif pname == 'RANGE_SHIFT':
@@ -349,7 +351,7 @@ def config_loader(config_file):
                     config[category][pname] = pval
                 else:
                     raise ValueError(f"Input {pname} must be an integer.")
-            elif pname in ['MEAN', 'MODE', 'MEDIAN', 'STDEV', 'SKEW']:
+            elif pname in ['MEAN', 'MODE', 'MEDIAN', 'STDEV', 'PERCENTILES', 'SKEW']:
                 config[category][pname] = bool_cast(pval)
             elif pname == 'PDF':
                 config[category][pname] = bool_cast(pval)
@@ -389,12 +391,13 @@ def prior_config(priors, tss, tcs, frac_priors=False):
     #absolute_priors = ['sL', 'tI', 'sT', 'w', 'sL_a', 'tI_a']
     # NOTE: Input value tss will be 0 and tcs will be same as len_scale if 
     # RANGE_SHIFT == True. This is set in liet_exe_mp.
-    relative_priors = {'mL': tss, 'mT': tcs, 'mL_a': tss}
+    relative_priors = {'mL': tss, 'mT': tcs, 'mL_a': tss, 'mT_a': tcs}
     len_scale = abs(tcs - tss)
 
     shifted_priors = copy.deepcopy(priors)
 
     for pname, pval in shifted_priors.items():
+        #print(f"pname: {pname}, pval: {pval}.", file=sys.stderr)
 
         if pname in relative_priors.keys():
 
@@ -430,7 +433,9 @@ def prior_config(priors, tss, tcs, frac_priors=False):
 
                 else:
                     raise ValueError(f'{distribution} not valid distribution.')
-            
+
+    # print(f"shifted priors: {shifted_priors}.", 
+    #         file=sys.stderr)     
     return shifted_priors
 
 
